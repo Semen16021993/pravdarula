@@ -41,13 +41,13 @@ function bodies(id: string, f: FormData): { title: string; paras: string[] } {
     objections_kit: { title: "КОМПЛЕКТ\nдля письменных возражений", paras: ["Образцы возражений, библиотека формулировок и пояснительная записка.", "[МАТЕРИАЛЫ КОМПЛЕКТА БУДУТ ПРЕДОСТАВЛЕНЫ ВЛАДЕЛЬЦЕМ ПРОЕКТА]"] },
     speech_kit: { title: "КОМПЛЕКТ\nдля выступления в суде", paras: ["Образцы судебных речей и ключевые принципы подготовки выступления.", "[МАТЕРИАЛЫ КОМПЛЕКТА БУДУТ ПРЕДОСТАВЛЕНЫ ВЛАДЕЛЬЦЕМ ПРОЕКТА]"] },
   };
-  return map[id];
+  return map[id]!;
 }
 
 const run = (text: string, bold = false) => new TextRun({ text, bold, font: "Times New Roman", size: 24 });
 
 function header(id: string, f: FormData): Paragraph[] {
-  const a = DOCS[id].addressee;
+  const a = DOCS[id]!.addressee;
   const lines: string[] = [];
   if (a === "gibdd") lines.push(`В ${v(f.gibddName, "НАИМЕНОВАНИЕ ПОДРАЗДЕЛЕНИЯ ГИБДД")}`, v(f.gibddAddress, "АДРЕС ГИБДД"));
   if (a === "court") lines.push(`В ${v(f.courtName, "НАИМЕНОВАНИЕ СУДА")}`, v(f.courtAddress, "АДРЕС СУДА"));
@@ -89,7 +89,7 @@ export function buildInstruction(stage: Stage, f: FormData) {
     ps.push(new Paragraph({ children: [run(`Шаг ${i + 1}. ${s.title}`, true)] }));
     ps.push(new Paragraph({ children: [run(`${s.why} Когда: ${s.when.toLowerCase()}.`)] }));
     s.docs.forEach((d) => {
-      const doc = DOCS[d];
+      const doc = DOCS[d]!;
       const to = doc.addressee === "gibdd" ? v(f.gibddName, "ПОДРАЗДЕЛЕНИЕ ГИБДД") : doc.addressee === "court" ? v(f.courtName, "СУД") : "передаётся потерпевшему";
       ps.push(new Paragraph({ indent: { left: 400 }, children: [run(`— ${doc.title}. Адресат: ${to}. Подача: лично под отметку о принятии на втором экземпляре или почтой с описью.`)] }));
     });

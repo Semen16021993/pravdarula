@@ -28,7 +28,7 @@ function formatPhone(raw: string) {
   const p = [d.slice(1, 4), d.slice(4, 7), d.slice(7, 9), d.slice(9, 11)];
   let out = "+7";
   if (p[0]) out += ` (${p[0]}`;
-  if (p[0].length === 3) out += ")";
+  if (p[0]!.length === 3) out += ")";
   if (p[1]) out += ` ${p[1]}`;
   if (p[2]) out += `-${p[2]}`;
   if (p[3]) out += `-${p[3]}`;
@@ -50,7 +50,7 @@ export function Constructor() {
 
   const steps: Step[] = ["mode", "stage", "form", "offer", "paid"];
   const idx = steps.indexOf(s.step);
-  const back = () => idx > 0 && s.step !== "paid" && set({ step: steps[idx - 1] });
+  const back = () => idx > 0 && s.step !== "paid" && set({ step: steps[idx - 1]! });
 
   return (
     <div className="min-h-screen">
@@ -269,7 +269,7 @@ function CatalogStep({ s, set }: P) {
               <ul className="mt-3 space-y-2 text-sm">
                 {s.cart.map((id) => (
                   <li key={id} className="flex items-start justify-between gap-2">
-                    <span>{DOCS[id].title}</span>
+                    <span>{DOCS[id]!.title}</span>
                     <button aria-label="Убрать" onClick={() => toggle(id)}><X className="size-4 text-muted-foreground" /></button>
                   </li>
                 ))}
@@ -297,7 +297,7 @@ function RoadmapView({ stage, locked, onDoc }: { stage: Stage; locked: boolean; 
               <div className="mt-4 flex flex-wrap gap-2">
                 {st.docs.map((d) => (
                   <button key={d} disabled={locked} onClick={() => onDoc?.(d)} className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-sm hover:border-primary disabled:cursor-default">
-                    {locked ? <Lock className="size-3.5" /> : <Download className="size-3.5 text-primary" />} {DOCS[d].title}
+                    {locked ? <Lock className="size-3.5" /> : <Download className="size-3.5 text-primary" />} {DOCS[d]!.title}
                   </button>
                 ))}
               </div>
@@ -337,7 +337,7 @@ function ComplexStep({ s, set }: P) {
 }
 
 function PaidStep({ s, onReset }: { s: State; onReset: () => void }) {
-  const get = (id: string) => download(buildDoc(id, s.form), DOCS[id].title);
+  const get = (id: string) => download(buildDoc(id, s.form), DOCS[id]!.title);
   return (
     <section>
       <span className="chip">Оплачено · документы доступны</span>
@@ -357,7 +357,7 @@ function PaidStep({ s, onReset }: { s: State; onReset: () => void }) {
         <div className="mt-6 space-y-3">
           {s.purchased.map((id) => (
             <div key={id} className="panel flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <h3 className="text-lg font-bold">{DOCS[id].title}</h3>
+              <h3 className="text-lg font-bold">{DOCS[id]!.title}</h3>
               <Button onClick={() => get(id)}><Download /> DOCX</Button>
             </div>
           ))}

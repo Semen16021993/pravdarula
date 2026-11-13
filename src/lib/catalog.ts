@@ -130,7 +130,7 @@ export function isRecommended(stage: Stage, docId: string, hasMaterials: boolean
 }
 
 export function docsForStage(stage: Stage): CatalogDoc[] {
-  return STAGE_DOCS[stage].map((id) => DOCS[id]);
+  return STAGE_DOCS[stage].map((id) => DOCS[id]!);
 }
 
 export function cartTotal(ids: string[]): number {
