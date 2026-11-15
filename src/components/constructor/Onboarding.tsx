@@ -68,7 +68,8 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
             width={1200}
             height={800}
             loading={step === 0 ? "eager" : "lazy"}
-            className="mx-auto mb-6 h-48 w-full object-contain sm:h-64"
+            className="mx-auto mb-6 h-72 w-[calc(100vw-2.5rem)] max-w-none object-contain sm:h-[26rem] sm:w-[min(56rem,calc(100vw-4rem))] sm:max-w-none"
+            style={{ marginLeft: "50%", transform: "translateX(-50%)" }}
           />
           <h1 ref={heading} tabIndex={-1} className="text-3xl font-bold leading-tight outline-none sm:text-4xl">
             {screen.title}
