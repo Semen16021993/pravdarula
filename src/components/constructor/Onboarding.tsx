@@ -60,28 +60,28 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
         <span className="text-sm text-muted-foreground" aria-label={`Шаг ${step + 1} из 3`}>0{step + 1} / 03</span>
       </header>
 
-      <main className="mx-auto max-w-3xl px-5 pb-8 pt-5 sm:px-8 sm:pt-7">
-        <div key={step} className="onboarding-enter">
+      <main className="mx-auto flex min-h-[calc(100svh-5.5rem)] max-w-3xl flex-col px-5 pb-4 pt-4 sm:px-8 sm:pt-5">
+        <div key={step} className="onboarding-enter flex min-h-0 flex-1 flex-col">
           <img
             src={screen.image}
             alt={screen.alt}
-            width={1200}
-            height={800}
+            width={1170}
+            height={499}
             loading={step === 0 ? "eager" : "lazy"}
-            className="mx-auto mb-6 h-72 w-[calc(100vw-2.5rem)] max-w-none object-contain sm:h-[26rem] sm:w-[min(56rem,calc(100vw-4rem))] sm:max-w-none"
+            className="mx-auto mb-4 h-[clamp(9rem,30svh,24rem)] w-[calc(100vw-2.5rem)] max-w-none object-contain sm:w-[min(56rem,calc(100vw-4rem))] sm:max-w-none"
             style={{ marginLeft: "50%", transform: "translateX(-50%)" }}
           />
           <h1 ref={heading} tabIndex={-1} className="text-3xl font-bold leading-tight outline-none sm:text-4xl">
             {screen.title}
           </h1>
-          <div className="mt-5 space-y-4 text-base leading-relaxed sm:text-lg">
+          <div className="mt-4 space-y-3 text-base leading-relaxed sm:text-lg">
             {screen.paragraphs.map((paragraph, index) => (
               <p key={paragraph} className={index === 0 ? "text-muted-foreground" : "text-foreground"}>{paragraph}</p>
             ))}
           </div>
         </div>
 
-        <div className="mt-8 flex items-center justify-between gap-4 border-t border-border pt-6">
+        <div className="mt-6 flex shrink-0 items-center justify-between gap-4 border-t border-border pt-4">
           {step > 0 ? (
             <Button variant="ghost" size="icon" aria-label="Назад" title="Назад" onClick={() => setStep(step - 1)}><ArrowLeft /></Button>
           ) : <span className="size-9" aria-hidden="true" />}
