@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { Constructor } from "@/components/constructor/Constructor";
+import { Onboarding } from "@/components/constructor/Onboarding";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -12,5 +14,10 @@ export const Route = createFileRoute("/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: Constructor,
+  component: DocumentEntry,
 });
+
+function DocumentEntry() {
+  const [started, setStarted] = useState(false);
+  return started ? <Constructor /> : <Onboarding onComplete={() => { window.scrollTo(0, 0); setStarted(true); }} />;
+}

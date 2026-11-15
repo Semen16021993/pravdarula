@@ -28,3 +28,5 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+- Keep the three-screen introduction in a separate presentation component before mounting the existing constructor; this preserves the order workflow and its saved state.
