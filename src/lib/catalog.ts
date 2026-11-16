@@ -17,7 +17,7 @@ export const DOCS: Record<string, CatalogDoc> = {
   gibdd_familiarize: {
     id: "gibdd_familiarize",
     title: "Заявление об ознакомлении с материалами дела в ГИБДД",
-    purpose: "Чтобы увидеть, что уже есть в деле, до объяснений инспектору.",
+    purpose: "Чтобы не давать лукавых показаний, противоречащих реальной доказательной базе.",
     kind: "template",
     price: 990,
     addressee: "gibdd",
@@ -25,7 +25,7 @@ export const DOCS: Record<string, CatalogDoc> = {
   receipt: {
     id: "receipt",
     title: "Расписка о получении денег в счёт компенсации вреда",
-    purpose: "Фиксирует, что вы возместили потерпевшему ущерб. Данные потерпевшего вписываются от руки.",
+    purpose: "Фиксирует возмещение ущерба и отсутствие претензий со стороны потерпевшего. Данные потерпевшего вписываются от руки.",
     kind: "template",
     price: 790,
     addressee: "none",
@@ -33,7 +33,7 @@ export const DOCS: Record<string, CatalogDoc> = {
   victim_requalify_gibdd: {
     id: "victim_requalify_gibdd",
     title: "Заявление потерпевшего о переквалификации на ч. 1 ст. 12.27",
-    purpose: "Подписывает потерпевший и подаёт в ГИБДД — смягчает квалификацию.",
+    purpose: "Подписывает потерпевший — способствует назначению штрафа вместо лишения ВУ.",
     kind: "template",
     price: 1290,
     addressee: "gibdd",
