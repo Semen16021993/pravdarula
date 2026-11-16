@@ -71,7 +71,7 @@ export function Constructor({ userId, email }: { userId: string; email: string }
   useEffect(() => { window.scrollTo({ top: 0, behavior: "smooth" }); }, [s.step]);
 
   const set = (p: Partial<State>) => setS((x) => ({ ...x, ...p }));
-  const reset = () => setS({ ...initial, form: { ...demoForm } });
+  const reset = () => setS((x) => ({ ...initial, form: { ...demoForm, ...filled(x.form) } as FormData }));
 
   const steps: Step[] = ["mode", "stage", "form", "offer", "paid"];
   if (!loaded) return <div className="min-h-screen" />;
