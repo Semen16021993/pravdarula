@@ -164,3 +164,7 @@ button:hover .document-card-hint, button:focus-visible .document-card-hint { ani
   .document-card-hint { animation: none; }
   .document-card-turn { transition: none; }
 }
+
+/* Flipped card grows to fit the full description (no inner scroll). */
+.document-card[data-flipped="true"] .document-card-back { position: relative; inset: auto; }
+.document-card[data-flipped="true"] .document-card-front { position: absolute; inset: 0; }

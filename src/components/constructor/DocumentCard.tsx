@@ -37,7 +37,7 @@ export function DocumentCard({ id, children, compact = false, recommended = fals
             <p className="min-w-0 text-sm font-bold text-heading">{doc.title}</p>
             <Button variant="ghost" size="icon" className="shrink-0" aria-label={`Вернуться: ${doc.title}`} title="Вернуться к документу" onClick={() => setFlipped(false)}><ArrowLeft /></Button>
           </div>
-          <div id={descriptionId} tabIndex={flipped ? 0 : -1} role="region" aria-label={`Описание: ${doc.title}`} className="document-card-description mt-2 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-3 text-sm leading-relaxed" onKeyDown={(event) => { if (event.key === "Escape") setFlipped(false); }}>
+          <div id={descriptionId} tabIndex={flipped ? 0 : -1} role="region" aria-label={`Описание: ${doc.title}`} className="document-card-description mt-2 text-sm leading-relaxed" onKeyDown={(event) => { if (event.key === "Escape") setFlipped(false); }}>
             {([["Что это за документ", details.what], ["Зачем он нужен", details.why], ["Когда используется", details.when], ["Как использовать", details.how]] as const).map(([title, text]) => <section key={title} className="mb-3"><h4 className="font-bold text-heading">{title}</h4><p className="mt-1">{text}</p></section>)}
           </div>
         </div>
