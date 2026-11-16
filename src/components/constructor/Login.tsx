@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { getTestLoginCode } from "@/lib/test-login.functions";
 
 export function Login() {
   const [email, setEmail] = useState("");
@@ -11,14 +12,16 @@ export function Login() {
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [testCode, setTestCode] = useState("");
 
   const send = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true); setError("");
-    const { error } = await supabase.auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: true, emailRedirectTo: window.location.origin } });
+    try {
+      const r = await getTestLoginCode({ data: { email: email.trim() } });
+      setTestCode(r.code); setSent(true);
+    } catch { setError("Не удалось получить код. Проверьте адрес почты."); }
     setBusy(false);
-    if (error) setError(error.message.includes("rate") ? "Слишком много попыток. Подождите минуту и попробуйте снова." : "Не удалось отправить письмо. Проверьте адрес почты.");
-    else setSent(true);
   };
 
   const verify = async (e: React.FormEvent) => {
@@ -47,7 +50,8 @@ export function Login() {
         ) : (
           <form onSubmit={verify} className="mt-6">
             <h1 className="text-2xl font-bold">Введите код из письма</h1>
-            <p className="mt-2 text-sm text-muted-foreground">Отправили письмо на <b>{email}</b>. Введите код из письма или просто нажмите на ссылку в нём.</p>
+            <p className="mt-2 text-sm text-muted-foreground">Код для <b>{email}</b>. Пока почта не подключена, он показан ниже.</p>
+            {testCode && <div className="mt-4 rounded-xl border border-dashed border-accent bg-accent/15 p-3 text-center text-sm"><span className="block text-xs text-muted-foreground">Тестовый режим — код вместо письма:</span><b className="text-2xl tracking-[0.3em] text-heading">{testCode}</b></div>}
             <Label htmlFor="code" className="mt-5 block font-bold text-heading">Код</Label>
             <Input id="code" inputMode="numeric" autoComplete="one-time-code" required value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))} className="mt-1.5 bg-background text-center text-2xl tracking-[0.4em]" />
             {error && <p className="mt-3 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
