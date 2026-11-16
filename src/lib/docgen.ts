@@ -65,14 +65,18 @@ function bodies(id: string, f: FormData): { title: string; paras: string[] } {
 
 const run = (text: string, bold = false) => new TextRun({ text, bold, font: "Times New Roman", size: 24 });
 
-function header(id: string, f: FormData): Paragraph[] {
+function headerLines(id: string, f: FormData): string[] {
   const a = DOCS[id]!.addressee;
   const lines: string[] = [];
   if (a === "gibdd") lines.push(`В ${v(f.gibddName, "НАИМЕНОВАНИЕ ПОДРАЗДЕЛЕНИЯ ГИБДД")}`, v(f.gibddAddress, "АДРЕС ГИБДД"));
   if (a === "court") lines.push(`В ${v(f.courtName, "НАИМЕНОВАНИЕ СУДА")}`, v(f.courtAddress, "АДРЕС СУДА"));
   if (a === "none") return [];
   lines.push(`от ${v(f.fio, "ФИО")}`, `${v(f.birthYear, "ГОД РОЖДЕНИЯ")} г.р.`, `адрес: ${v(f.address, "АДРЕС")}`, `тел.: ${v(f.phone, "ТЕЛЕФОН")}`, `email: ${v(f.email, "EMAIL")}`);
-  return lines.map((t) => new Paragraph({ indent: { left: 5000 }, alignment: AlignmentType.LEFT, children: [run(t)] }));
+  return lines;
+}
+
+function header(id: string, f: FormData): Paragraph[] {
+  return headerLines(id, f).map((t) => new Paragraph({ indent: { left: 5000 }, alignment: AlignmentType.LEFT, children: [run(t)] }));
 }
 
 function build(children: Paragraph[]) {
@@ -124,4 +128,42 @@ export async function download(doc: Document, name: string) {
   a.href = url; a.download = name.replace(/[^\p{L}\p{N} ._-]/gu, "") + ".docx";
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+const fileName = (name: string, ext: string) => name.replace(/[^\p{L}\p{N} ._-]/gu, "") + ext;
+
+/** PDF с тем же содержимым, что и DOCX (шрифт с кириллицей из /fonts). */
+export async function downloadPdf(id: string, f: FormData, name: string) {
+  const [{ PDFDocument, rgb }, fontkit] = await Promise.all([import("pdf-lib"), import("@pdf-lib/fontkit").then((m) => m.default)]);
+  const pdf = await PDFDocument.create();
+  pdf.registerFontkit(fontkit);
+  const [r, b] = await Promise.all(["/fonts/LiberationSerif-Regular.ttf", "/fonts/LiberationSerif-Bold.ttf"].map((u) => fetch(u).then((x) => x.arrayBuffer())));
+  const reg = await pdf.embedFont(r!, { subset: true });
+  const bold = await pdf.embedFont(b!, { subset: true });
+  const size = 12, lh = 17, W = 595, H = 842, L = 85, R = 42, T = 57, B = 57, maxW = W - L - R;
+  let page = pdf.addPage([W, H]);
+  let y = H - T;
+  const nl = () => { if (y < B) { page = pdf.addPage([W, H]); y = H - T; } };
+  const wrap = (t: string, font: typeof reg, w: number) => {
+    const out: string[] = []; let line = "";
+    for (const word of t.split(" ")) {
+      const test = line ? line + " " + word : word;
+      if (font.widthOfTextAtSize(test, size) > w && line) { out.push(line); line = word; } else line = test;
+    }
+    out.push(line); return out;
+  };
+  const draw = (t: string, x: number, font = reg) => { nl(); page.drawText(t, { x, y, size, font, color: rgb(0, 0, 0) }); y -= lh; };
+  for (const h of headerLines(id, f)) for (const l of wrap(h, reg, maxW - 250)) draw(l, L + 250);
+  y -= lh;
+  const bd = bodies(id, f);
+  for (const t of bd.title.split("\n")) draw(t, L + (maxW - bold.widthOfTextAtSize(t, size)) / 2, bold);
+  y -= lh;
+  for (const p of bd.paras) wrap(p, reg, maxW - 35).forEach((l, i) => draw(l, i === 0 ? L + 35 : L));
+  y -= lh;
+  draw(`«___» __________ 20__ г.        ____________ / ${v(f.fio, "ФИО")}`, L);
+  pdf.getPages().forEach((pg, i) => { const n = String(i + 1); pg.drawText(n, { x: W / 2 - reg.widthOfTextAtSize(n, 10) / 2, y: 30, size: 10, font: reg }); });
+  const bytes = await pdf.save();
+  const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/pdf" }));
+  const a = document.createElement("a"); a.href = url; a.download = fileName(name, ".pdf"); a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
