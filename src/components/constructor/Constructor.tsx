@@ -184,8 +184,8 @@ function FormStep({ s, set }: P) {
         <div className="mt-4 grid gap-5 md:grid-cols-2">
           <Field id="accidentDate" label="Дата ДТП" hint="Выберите дату." type="date" value={f.accidentDate} onChange={up("accidentDate")} />
           <Field id="accidentTime" label="Примерное время" hint="Можно примерно: «около 18:30»." value={f.accidentTime} onChange={up("accidentTime")} />
-          <div className="md:col-span-2"><Field id="accidentPlace" label="Место ДТП" hint="Адрес или описание: «парковка ТЦ, ул. Ленина, 5»." value={f.accidentPlace} onChange={up("accidentPlace")} /></div>
-          <div className="md:col-span-2"><Field id="victim" label="Потерпевший" hint="ФИО или только фамилия — этого достаточно." value={f.victim} onChange={up("victim")} /></div>
+          <div className="md:col-span-2"><Field id="accidentPlace" label="Место ДТП" hint="Адрес или описание: «г. Москва, ул. Ленина, 5, парковка ТЦ»" value={f.accidentPlace} onChange={up("accidentPlace")} /></div>
+          <div className="md:col-span-2"><Field id="victim" label="Потерпевший" hint="ФИО или только фамилия — этого достаточно. Если не знаете фамилию в поле ввода напишите: потерпевший" value={f.victim} onChange={up("victim")} /></div>
         </div>
       </div>
 
@@ -195,8 +195,8 @@ function FormStep({ s, set }: P) {
         <div className="mt-4 grid gap-5 md:grid-cols-2">
           <Field id="gibddName" label="Подразделение ГИБДД" hint="Например: ОБ ДПС ГИБДД УМВД по г. Иваново." value={f.gibddName} onChange={up("gibddName")} />
           <Field id="gibddAddress" label="Адрес ГИБДД" hint="Индекс, город, улица, дом." placeholder="153000, г. Иваново, ул. ..., д. ..." value={f.gibddAddress} onChange={up("gibddAddress")} />
-          <Field id="courtName" label="Суд" hint="Если не знаете — оставьте пустым." value={f.courtName} onChange={up("courtName")} />
-          <Field id="courtAddress" label="Адрес суда" hint="Если не знаете — оставьте пустым." value={f.courtAddress} onChange={up("courtAddress")} />
+          <Field id="courtName" label="Суд" hint="Название суда. Если не знаете — оставьте пустым." value={f.courtName} onChange={up("courtName")} />
+          <Field id="courtAddress" label="Адрес суда" hint="Индекс, город, улица, дом. Если не знаете — оставьте пустым." value={f.courtAddress} onChange={up("courtAddress")} />
         </div>
       </div>
 
