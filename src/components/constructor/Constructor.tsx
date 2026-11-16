@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, Check, Download, FileText, Lock, Map, ShoppingCart, X } from "lucide-react";
+import { ArrowLeft, Check, Download, FileText, FolderOpen, Lock, LogOut, Map, ShoppingCart, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { addPurchase, loadCabinet, saveForm, type Purchase } from "@/lib/cabinet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +14,7 @@ import { DocumentCard } from "./DocumentCard";
 import { FileCabinet } from "./FileCabinet";
 import { buildDoc, buildInstruction, demoForm, download, downloadPdf, emptyForm, type FormData } from "@/lib/docgen";
 
-type Step = "mode" | "stage" | "form" | "offer" | "paid";
+type Step = "mode" | "stage" | "form" | "offer" | "paid" | "cabinet";
 type OrderStatus = "draft" | "pending" | "paid" | "failed";
 
 interface State {
@@ -37,26 +39,42 @@ function formatPhone(raw: string) {
   return raw.trim() === "" ? "" : out;
 }
 
-export function Constructor() {
+const filled = (o: object) => Object.fromEntries(Object.entries(o).filter(([, v]) => String(v ?? "").trim()));
+
+export function Constructor({ userId, email }: { userId: string; email: string }) {
   const [s, setS] = useState<State>(initial);
   const [loaded, setLoaded] = useState(false);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const key = `${KEY}:${userId}`;
   useEffect(() => {
+    let saved: State = initial;
     try {
-      const raw = localStorage.getItem(KEY);
-      const saved = raw ? { ...initial, ...JSON.parse(raw) } : initial;
-      // Демо-данные: подставляем во все пустые поля, чтобы не заполнять вручную.
-      saved.form = { ...demoForm, ...Object.fromEntries(Object.entries(saved.form).filter(([, v]) => String(v).trim())) };
-      setS(saved);
+      const raw = localStorage.getItem(key);
+      if (raw) saved = { ...initial, ...JSON.parse(raw) };
     } catch { /* ignore */ }
-    setLoaded(true);
-  }, []);
-  useEffect(() => { if (loaded) localStorage.setItem(KEY, JSON.stringify(s)); }, [s, loaded]);
+    loadCabinet(userId).then((cab) => {
+      setPurchases(cab.purchases);
+      // Анкета из кабинета важнее локальной; демо-данные — во все оставшиеся пустые поля.
+      const form = { ...demoForm, ...filled(saved.form), ...filled(cab.form) } as FormData;
+      setS({ ...saved, form });
+      setLoaded(true);
+    }).catch(() => { setS({ ...saved, form: { ...demoForm, ...filled(saved.form) } as FormData }); setLoaded(true); });
+  }, [userId]);
+  useEffect(() => { if (loaded) localStorage.setItem(key, JSON.stringify(s)); }, [s, loaded]);
+  useEffect(() => {
+    if (!loaded) return;
+    const t = setTimeout(() => { saveForm(userId, s.form); }, 800);
+    return () => clearTimeout(t);
+  }, [s.form, loaded, userId]);
+  const onPaid = async (p: Purchase) => { setPurchases(await addPurchase(userId, p)); };
+  const signOut = async () => { await supabase.auth.signOut(); };
   useEffect(() => { window.scrollTo({ top: 0, behavior: "smooth" }); }, [s.step]);
 
   const set = (p: Partial<State>) => setS((x) => ({ ...x, ...p }));
   const reset = () => setS({ ...initial, form: { ...demoForm } });
 
   const steps: Step[] = ["mode", "stage", "form", "offer", "paid"];
+  if (!loaded) return <div className="min-h-screen" />;
   const idx = steps.indexOf(s.step);
   const back = () => idx > 0 && s.step !== "paid" && set({ step: steps[idx - 1]! });
 
@@ -67,11 +85,15 @@ export function Constructor() {
           <span className="block font-serif text-lg font-bold text-heading">Право Руля</span>
           <span className="text-xs text-muted-foreground">конструктор документов · ст. 12.27 ч. 2</span>
         </button>
-        <Button asChild size="sm"><a href="tel:+79105086284">8 910 508 6284</a></Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant={s.step === "cabinet" ? "default" : "outline"} onClick={() => set({ step: "cabinet" })}><FolderOpen /> Мои документы{purchases.length ? ` (${purchases.length})` : ""}</Button>
+          <Button asChild size="sm" variant="ghost" className="hidden md:inline-flex"><a href="tel:+79105086284">8 910 508 6284</a></Button>
+          <Button size="sm" variant="ghost" onClick={signOut} title={email} aria-label="Выйти"><LogOut /><span className="hidden sm:inline">Выйти</span></Button>
+        </div>
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-10">
-        {s.step !== "mode" && (
+        {s.step !== "mode" && s.step !== "cabinet" && (
           <div className="mb-6 flex items-center gap-4">
             {s.step !== "paid" && <Button variant="ghost" size="sm" onClick={back}><ArrowLeft /> Назад</Button>}
             <div className="flex flex-1 gap-2">
@@ -88,15 +110,16 @@ export function Constructor() {
         {s.step === "mode" && <ModeStep onPick={(mode) => set({ mode, step: "stage" })} />}
         {s.step === "stage" && <StageStep s={s} set={set} />}
         {s.step === "form" && <FormStep s={s} set={set} />}
-        {s.step === "offer" && s.mode === "single" && <CatalogStep s={s} set={set} />}
-        {s.step === "offer" && s.mode === "complex" && <ComplexStep s={s} set={set} />}
+        {s.step === "offer" && s.mode === "single" && <CatalogStep s={s} set={set} onPaid={onPaid} />}
+        {s.step === "offer" && s.mode === "complex" && <ComplexStep s={s} set={set} onPaid={onPaid} />}
         {s.step === "paid" && <PaidStep s={s} onReset={reset} />}
+        {s.step === "cabinet" && <CabinetStep form={s.form} email={email} purchases={purchases} onMore={reset} />}
       </main>
     </div>
   );
 }
 
-type P = { s: State; set: (p: Partial<State>) => void };
+type P = { s: State; set: (p: Partial<State>) => void; onPaid?: (p: Purchase) => void };
 
 function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
   return (
@@ -219,10 +242,13 @@ function FormStep({ s, set }: P) {
   );
 }
 
-function PayBox({ total, items, s, set }: P & { total: number; items: string[] }) {
+function PayBox({ total, items, s, set, onPaid }: P & { total: number; items: string[] }) {
   const pay = (ok: boolean) => {
     set({ status: "pending" });
-    setTimeout(() => set(ok ? { status: "paid", purchased: items, step: "paid" } : { status: "failed" }), 900);
+    setTimeout(() => {
+      set(ok ? { status: "paid", purchased: items, step: "paid" } : { status: "failed" });
+      if (ok) onPaid?.({ mode: s.mode!, stage: s.stage!, docs: items, at: new Date().toISOString() });
+    }, 900);
   };
   return (
     <div className="panel lg:sticky lg:top-6">
@@ -238,7 +264,7 @@ function PayBox({ total, items, s, set }: P & { total: number; items: string[] }
   );
 }
 
-function CatalogStep({ s, set }: P) {
+function CatalogStep({ s, set, onPaid }: P) {
   const stage = s.stage!;
   const toggle = (id: string) => set({ cart: s.cart.includes(id) ? s.cart.filter((x) => x !== id) : [...s.cart, id], status: "draft" });
   return (
@@ -277,7 +303,7 @@ function CatalogStep({ s, set }: P) {
               </ul>
             )}
           </div>
-          <PayBox s={s} set={set} total={cartTotal(s.cart)} items={s.cart} />
+          <PayBox s={s} set={set} onPaid={onPaid} total={cartTotal(s.cart)} items={s.cart} />
         </div>
       </div>
     </section>
@@ -310,7 +336,7 @@ function RoadmapView({ stage, locked, onDoc }: { stage: Stage; locked: boolean; 
   );
 }
 
-function ComplexStep({ s, set }: P) {
+function ComplexStep({ s, set, onPaid }: P) {
   const stage = s.stage!;
   const items = complexDocs(stage);
   const sum = cartTotal(items);
@@ -330,7 +356,7 @@ function ComplexStep({ s, set }: P) {
             </ul>
             <p className="mt-3 text-xs text-muted-foreground">По отдельности документы стоили бы {rub(sum)}.</p>
           </div>
-          <PayBox s={s} set={set} total={COMPLEX_PRICE[stage]} items={items} />
+          <PayBox s={s} set={set} onPaid={onPaid} total={COMPLEX_PRICE[stage]} items={items} />
         </div>
       </div>
     </section>
@@ -367,6 +393,53 @@ function PaidStep({ s, onReset }: { s: State; onReset: () => void }) {
           <Button size="lg" variant="outline" onClick={onReset}>Начать заново</Button>
         </div>
       </div>
+    </section>
+  );
+}
+
+function CabinetStep({ form, email, purchases, onMore }: { form: FormData; email: string; purchases: Purchase[]; onMore: () => void }) {
+  const get = (id: string) => download(buildDoc(id, form), DOCS[id]!.title);
+  const pdf = (id: string) => downloadPdf(id, form, DOCS[id]!.title);
+  const list = [...purchases].reverse();
+  return (
+    <section>
+      <span className="chip">Личный кабинет · {email}</span>
+      <h1 className="mt-3 text-3xl font-bold md:text-4xl">Мои документы</h1>
+      <p className="mt-2 text-muted-foreground">Все купленные документы. Скачивайте заново сколько угодно раз — в них подставляются актуальные данные вашей анкеты.</p>
+      {list.length === 0 ? (
+        <div className="panel mt-8">
+          <p className="text-muted-foreground">Пока здесь пусто — вы ещё ничего не покупали.</p>
+          <Button className="mt-4" size="lg" onClick={onMore}>Выбрать документы</Button>
+        </div>
+      ) : (
+        <div className="mt-8 space-y-10">
+          {list.map((p) => (
+            <div key={p.at}>
+              <h2 className="text-xl font-bold">
+                {p.mode === "complex" ? "Комплекс" : "Документы"} · стадия {p.stage}
+                <span className="ml-2 text-sm font-normal text-muted-foreground">от {new Date(p.at).toLocaleDateString("ru-RU")}</span>
+              </h2>
+              <div className="mt-4 grid gap-6 lg:grid-cols-[1fr_340px]">
+                <FileCabinet
+                  sections={p.mode === "complex" ? ROADMAP[p.stage].map((st, i) => ({ label: `Шаг ${i + 1}. ${st.title}`, docs: st.docs })) : [{ docs: p.docs }]}
+                  onDocx={get} onPdf={pdf}
+                />
+                {p.mode === "complex" && (
+                  <div className="panel h-fit">
+                    <h3 className="text-lg font-bold">Письменная инструкция</h3>
+                    <Button className="mt-4 w-full" onClick={() => download(buildInstruction(p.stage, form), "Инструкция Право Руля")}><Download /> Скачать инструкцию</Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+          <div className="panel border-primary bg-secondary">
+            <h2 className="text-2xl font-bold">Нужны ещё документы?</h2>
+            <p className="mt-2 text-muted-foreground">Дело перешло на новую стадию или понадобился другой документ — докупите его, анкету заполнять заново не нужно.</p>
+            <Button className="mt-4" size="lg" onClick={onMore}>Докупить документы</Button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
