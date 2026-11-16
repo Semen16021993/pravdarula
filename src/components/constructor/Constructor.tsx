@@ -171,7 +171,7 @@ function FormStep({ s, set }: P) {
   const needPassport = s.stage === 1;
   return (
     <section className="max-w-3xl">
-      <h1 className="text-3xl font-bold md:text-4xl">Анкета</h1>
+      <h1 className="text-3xl font-bold md:text-4xl">Анкета - ваши документы будут сразу заполнены реальными данными.</h1>
       <p className="mt-2 text-muted-foreground">Не знаете ответ — оставьте поле пустым. В документе останется место, чтобы вписать от руки.</p>
 
       <div className="panel mt-6">
