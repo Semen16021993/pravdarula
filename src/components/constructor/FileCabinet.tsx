@@ -22,7 +22,7 @@ export function FileCabinet({ sections, onDocx, onPdf }: { sections: CabinetSect
                 <li key={id} className="wallet-card" data-tone={n % 4} data-open={active}>
                   <button type="button" className="flex w-full items-center gap-3 text-left" aria-expanded={active} onClick={() => setOpen(active ? null : id)}>
                     <span className="wallet-num">№ {String(n).padStart(2, "0")}</span>
-                    <span className="min-w-0 flex-1 truncate font-bold">{DOCS[id]!.title}</span>
+                    <span className="min-w-0 flex-1 truncate text-[1.05rem] font-bold">{DOCS[id]!.title}</span>
                     <ChevronDown className="size-5 shrink-0 transition-transform" style={{ transform: active ? "rotate(180deg)" : undefined }} />
                   </button>
                   <div className="wallet-body">

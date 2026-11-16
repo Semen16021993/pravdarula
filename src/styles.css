@@ -177,8 +177,10 @@ button:hover .document-card-hint, button:focus-visible .document-card-hint { ani
 .wallet-card[data-tone="2"] { background: linear-gradient(135deg, var(--chart-2), var(--primary)); }
 .wallet-card[data-tone="3"] { background: linear-gradient(135deg, var(--accent), var(--chart-5)); color: var(--accent-foreground); }
 .wallet-card[data-tone="0"] { background: linear-gradient(135deg, var(--chart-3), var(--heading)); }
-.wallet-num { font-size: .75rem; font-weight: 700; opacity: .8; letter-spacing: .05em; }
+.wallet-num { font-size: .82rem; font-weight: 700; opacity: .95; letter-spacing: .06em; font-variant-numeric: tabular-nums; }
 .wallet-body { display: grid; grid-template-rows: 0fr; overflow: hidden; max-height: 0; opacity: 0; transition: max-height .4s ease, opacity .3s ease; }
+.wallet-body h3 { color: inherit; }
+.wallet-card[data-open="true"] .wallet-body { border-top: 1px solid color-mix(in oklab, currentColor 28%, transparent); }
 .wallet-card[data-open="true"] { margin-bottom: 2.8rem; transform: none; }
 .wallet-card[data-open="true"] + .wallet-card { margin-top: 0; }
 .wallet-card[data-open="true"] .wallet-body { max-height: 20rem; opacity: 1; padding-top: 1.25rem; min-height: 9rem; display: block; }
