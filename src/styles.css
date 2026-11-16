@@ -152,7 +152,15 @@
   .document-card-compact .document-card-front { padding: 1rem; }
 }
 
+@keyframes doc-hint-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.25); opacity: .55; }
+}
+.document-card-hint { animation: doc-hint-pulse 1.6s ease-in-out infinite; transform-origin: center; }
+button:hover .document-card-hint, button:focus-visible .document-card-hint { animation: none; transform: scale(1.25); opacity: 1; }
+
 @media (prefers-reduced-motion: reduce) {
   .onboarding-enter { animation: none; }
+  .document-card-hint { animation: none; }
   .document-card-turn { transition: none; }
 }

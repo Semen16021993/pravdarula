@@ -25,7 +25,7 @@ export function DocumentCard({ id, children, compact = false, recommended = fals
             </div>}
             <h3 className={cn("font-bold", compact ? "text-sm" : "mt-1 text-lg")}>
               <Button variant="ghost" className="h-auto w-full justify-start whitespace-normal rounded-md p-0 text-left font-serif text-inherit hover:bg-transparent hover:text-primary" aria-label={`Подробнее: ${doc.title}`} aria-expanded={flipped} aria-controls={descriptionId} onClick={() => setFlipped(true)}>
-                <span className="min-w-0">{doc.title}</span><Info className="shrink-0 text-primary" />
+                <span className="min-w-0">{doc.title}</span><Info className="document-card-hint shrink-0 text-primary size-5" />
               </Button>
             </h3>
             {!compact && <p className="mt-1 text-sm text-muted-foreground">{doc.purpose}</p>}
