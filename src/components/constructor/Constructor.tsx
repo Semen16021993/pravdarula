@@ -8,7 +8,7 @@ import {
   COMPLEX_PRICE, DOCS, ROADMAP, STAGES, cartTotal, complexDocs, docsForStage, isRecommended, rub,
   type Mode, type Stage,
 } from "@/lib/catalog";
-import { buildDoc, buildInstruction, download, emptyForm, type FormData } from "@/lib/docgen";
+import { buildDoc, buildInstruction, demoForm, download, emptyForm, type FormData } from "@/lib/docgen";
 
 type Step = "mode" | "stage" | "form" | "offer" | "paid";
 type OrderStatus = "draft" | "pending" | "paid" | "failed";
@@ -39,7 +39,13 @@ export function Constructor() {
   const [s, setS] = useState<State>(initial);
   const [loaded, setLoaded] = useState(false);
   useEffect(() => {
-    try { const raw = localStorage.getItem(KEY); if (raw) setS({ ...initial, ...JSON.parse(raw) }); } catch { /* ignore */ }
+    try {
+      const raw = localStorage.getItem(KEY);
+      const saved = raw ? { ...initial, ...JSON.parse(raw) } : initial;
+      // Пока анкета пустая — подставляем демо-данные, чтобы не заполнять вручную.
+      if (Object.values(saved.form).every((val) => !String(val).trim())) saved.form = demoForm;
+      setS(saved);
+    } catch { /* ignore */ }
     setLoaded(true);
   }, []);
   useEffect(() => { if (loaded) localStorage.setItem(KEY, JSON.stringify(s)); }, [s, loaded]);
