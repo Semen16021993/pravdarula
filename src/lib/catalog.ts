@@ -57,7 +57,7 @@ export const DOCS: Record<string, CatalogDoc> = {
   objections_kit: {
     id: "objections_kit",
     title: "Комплект для письменных возражений",
-    purpose: "Образцы возражений, библиотека готовых формулировок и записка о самостоятельном составлении.",
+    purpose: "Образцы возражений, библиотека самых готовых формулировок и рекомендации по составлению.",
     kind: "kit",
     price: 2490,
     addressee: "court",
@@ -65,7 +65,7 @@ export const DOCS: Record<string, CatalogDoc> = {
   speech_kit: {
     id: "speech_kit",
     title: "Комплект для речи в суде",
-    purpose: "Несколько образцов выступлений и ключевые принципы подготовки речи.",
+    purpose: "Библиотека примеров успешных выступлений по 12.27 ч.2 и ключевые принципы подготовки речи.",
     kind: "kit",
     price: 1990,
     addressee: "court",
@@ -73,7 +73,7 @@ export const DOCS: Record<string, CatalogDoc> = {
   art29_court: {
     id: "art29_court",
     title: "Ходатайство о применении ст. 2.9 КоАП (малозначительность)",
-    purpose: "Просьба освободить от ответственности из-за малозначительности.",
+    purpose: "Оформление освобождения от ответственности из-за малозначительности.",
     kind: "template",
     price: 1290,
     addressee: "court",
@@ -81,7 +81,7 @@ export const DOCS: Record<string, CatalogDoc> = {
   requalify_court: {
     id: "requalify_court",
     title: "Ходатайство о переквалификации на ч. 1 ст. 12.27 (суд)",
-    purpose: "Просьба к суду квалифицировать действия по более мягкой части статьи.",
+    purpose: "Оформление переквалификации действий по более мягкой части статьи. Назначение штрафа.",
     kind: "template",
     price: 1290,
     addressee: "court",
@@ -89,7 +89,7 @@ export const DOCS: Record<string, CatalogDoc> = {
   terminate_court: {
     id: "terminate_court",
     title: "Ходатайство о прекращении производства (нет состава)",
-    purpose: "Просьба прекратить дело в связи с отсутствием состава правонарушения.",
+    purpose: "Оформление прекращения дела в связи с отсутствием состава правонарушения.",
     kind: "template",
     price: 1490,
     addressee: "court",
@@ -105,7 +105,7 @@ export const DOCS: Record<string, CatalogDoc> = {
   court_familiarize: {
     id: "court_familiarize",
     title: "Заявление об ознакомлении с материалами дела в суде",
-    purpose: "Чтобы изучить протокол, схему и объяснения до заседания.",
+    purpose: "Если в ГИБДД на предыдущих стадиях не удалось ознакомиться с материалами. Чтобы изучить протокол, схему и объяснения до заседания.",
     kind: "template",
     price: 990,
     addressee: "court",
