@@ -26,8 +26,8 @@ export function FileCabinet({ sections, onDocx, onPdf }: { sections: CabinetSect
                     <ChevronDown className="size-5 shrink-0 transition-transform" style={{ transform: active ? "rotate(180deg)" : undefined }} />
                   </button>
                   <div className="wallet-body">
-                    <FileText className="size-10 opacity-80" />
-                    <h3 className="mt-3 text-2xl font-bold leading-tight">{DOCS[id]!.title}</h3>
+                    <FileText className="size-10 opacity-90" />
+                    <h3 className="mt-3 text-[1.65rem] font-bold leading-snug">{DOCS[id]!.title}</h3>
                     <div className="mt-6 flex flex-wrap gap-2">
                       <Button variant="secondary" onClick={() => onDocx(id)}><Download /> DOCX</Button>
                       <Button variant="secondary" onClick={() => onPdf(id)}><Download /> PDF</Button>
