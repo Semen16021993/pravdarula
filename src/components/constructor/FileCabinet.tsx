@@ -29,8 +29,8 @@ export function FileCabinet({ sections, onDocx, onPdf }: { sections: CabinetSect
                     <FileText className="size-10 opacity-90" />
                     <h3 className="mt-3 text-[1.65rem] font-bold leading-snug">{DOCS[id]!.title}</h3>
                         <div className="mt-6 flex flex-wrap gap-2">
-                          <Button onClick={() => onDocx(id)}><Download /> DOCX</Button>
-                          <Button variant="outline" onClick={() => onPdf(id)}><Download /> PDF</Button>
+                          <Button variant="secondary" onClick={() => onDocx(id)}><Download /> DOCX</Button>
+                          <Button variant="outline" className="border-primary-foreground/40 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground" onClick={() => onPdf(id)}><Download /> PDF</Button>
                         </div>
                   </div>
                 </li>
