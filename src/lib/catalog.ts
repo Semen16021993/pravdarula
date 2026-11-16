@@ -41,7 +41,7 @@ export const DOCS: Record<string, CatalogDoc> = {
   requalify_gibdd: {
     id: "requalify_gibdd",
     title: "Ходатайство о переквалификации с ч. 2 на ч. 1 ст. 12.27 (ГИБДД)",
-    purpose: "Просьба к ГИБДД квалифицировать действия по более мягкой части статьи.",
+    purpose: "Просьба к ГИБДД квалифицировать действия по более мягкой части статьи и ограничиться штрафом.",
     kind: "template",
     price: 1290,
     addressee: "gibdd",
