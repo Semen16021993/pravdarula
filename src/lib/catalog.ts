@@ -110,6 +110,14 @@ export const DOCS: Record<string, CatalogDoc> = {
     price: 990,
     addressee: "court",
   },
+  attach_court: {
+    id: "attach_court",
+    title: "Ходатайство о приобщении документов к материалам дела",
+    purpose: "Чтобы суд официально принял и учёл ваши документы: расписку, заявление потерпевшего, характеристики, фото, экспертизы.",
+    kind: "template",
+    price: 790,
+    addressee: "court",
+  },
 };
 
 export const STAGES: { id: Stage; short: string; text: string }[] = [
@@ -121,7 +129,7 @@ export const STAGES: { id: Stage; short: string; text: string }[] = [
 export const STAGE_DOCS: Record<Stage, string[]> = {
   1: ["gibdd_familiarize", "receipt", "victim_requalify_gibdd"],
   2: ["gibdd_familiarize", "requalify_gibdd", "postpone_court"],
-  3: ["objections_kit", "speech_kit", "art29_court", "requalify_court", "terminate_court", "trace_expertise", "court_familiarize"],
+  3: ["objections_kit", "speech_kit", "art29_court", "requalify_court", "terminate_court", "trace_expertise", "court_familiarize", "attach_court"],
 };
 
 /** Стадия 3: заявление об ознакомлении в суде рекомендуется, если материалов нет. Никогда не скрывается. */
@@ -162,7 +170,7 @@ export const ROADMAP: Record<Stage, RoadmapStep[]> = {
   3: [
     { title: "Изучите материалы дела в суде", why: "Без материалов невозможно выстроить защиту.", when: "До заседания", docs: ["court_familiarize"] },
     { title: "Проверьте сам факт ДТП", why: "Нет соприкосновения — нет ДТП и нет состава.", when: "До или в начале заседания", docs: ["trace_expertise", "terminate_court"] },
-    { title: "Заявите о смягчении", why: "Переквалификация или малозначительность сохраняют права.", when: "В заседании", docs: ["requalify_court", "art29_court"] },
+    { title: "Заявите о смягчении", why: "Переквалификация или малозначительность сохраняют права.", when: "В заседании", docs: ["attach_court", "requalify_court", "art29_court"] },
     { title: "Подготовьте позицию и речь", why: "Письменные возражения и выступление закрепляют доводы.", when: "За 2–3 дня до суда", docs: ["objections_kit", "speech_kit"] },
   ],
 };

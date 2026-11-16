@@ -15,6 +15,7 @@ describe("каталог", () => {
     expect(isRecommended(3, "court_familiarize", false)).toBe(true);
     expect(isRecommended(3, "court_familiarize", true)).toBe(false);
     expect(STAGE_DOCS[3]).toContain("court_familiarize");
+    expect(STAGE_DOCS[3]).toContain("attach_court");
   });
   it("корзина суммирует цены", () => {
     expect(cartTotal(["gibdd_familiarize", "receipt"])).toBe(990 + 790);
