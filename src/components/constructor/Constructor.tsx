@@ -8,6 +8,7 @@ import {
   COMPLEX_PRICE, DOCS, ROADMAP, STAGES, cartTotal, complexDocs, docsForStage, isRecommended, rub,
   type Mode, type Stage,
 } from "@/lib/catalog";
+import { DocumentCard } from "./DocumentCard";
 import { buildDoc, buildInstruction, demoForm, download, emptyForm, type FormData } from "@/lib/docgen";
 
 type Step = "mode" | "stage" | "form" | "offer" | "paid";
@@ -249,22 +250,12 @@ function CatalogStep({ s, set }: P) {
             const inCart = s.cart.includes(d.id);
             const rec = isRecommended(stage, d.id, s.hasMaterials);
             return (
-              <div key={d.id} className={`panel flex flex-col gap-4 md:flex-row md:items-center ${rec ? "border-2 border-accent" : ""}`}>
-                <div className="flex-1">
-                  <div className="flex flex-wrap gap-2">
-                    {rec && <span className="chip-accent">Рекомендуем: у вас нет материалов дела</span>}
-                    <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{d.kind === "kit" ? "Комплект образцов" : "DOCX с вашими данными"}</span>
-                  </div>
-                  <h3 className="mt-1 text-lg font-bold">{d.title}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">{d.purpose}</p>
-                </div>
-                <div className="flex items-center gap-4 md:flex-col md:items-end">
-                  <span className="text-xl font-bold text-heading">{rub(d.price)}</span>
-                  <Button variant={inCart ? "secondary" : "default"} onClick={() => toggle(d.id)}>
-                    {inCart ? <><Check /> В корзине</> : <><ShoppingCart /> В корзину</>}
-                  </Button>
-                </div>
-              </div>
+              <DocumentCard key={d.id} id={d.id} recommended={rec}>
+                <span className="text-xl font-bold text-heading">{rub(d.price)}</span>
+                <Button variant={inCart ? "secondary" : "default"} onClick={() => toggle(d.id)}>
+                  {inCart ? <><Check /> В корзине</> : <><ShoppingCart /> В корзину</>}
+                </Button>
+              </DocumentCard>
             );
           })}
         </div>
@@ -300,11 +291,11 @@ function RoadmapView({ stage, locked, onDoc }: { stage: Stage; locked: boolean; 
             <h3 className="mt-1 text-xl font-bold">{st.title}</h3>
             <p className="mt-1 text-muted-foreground">{st.why}</p>
             {st.docs.length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-4 grid gap-3">
                 {st.docs.map((d) => (
-                  <button key={d} disabled={locked} onClick={() => onDoc?.(d)} className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-sm hover:border-primary disabled:cursor-default">
-                    {locked ? <Lock className="size-3.5" /> : <Download className="size-3.5 text-primary" />} {DOCS[d]!.title}
-                  </button>
+                  <DocumentCard key={d} id={d} compact>
+                    {locked ? <Lock className="size-4 text-muted-foreground" aria-label="Откроется после оплаты" /> : <Button size="sm" onClick={() => onDoc?.(d)}><Download /> DOCX</Button>}
+                  </DocumentCard>
                 ))}
               </div>
             )}
@@ -362,10 +353,9 @@ function PaidStep({ s, onReset }: { s: State; onReset: () => void }) {
       ) : (
         <div className="mt-6 space-y-3">
           {s.purchased.map((id) => (
-            <div key={id} className="panel flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <h3 className="text-lg font-bold">{DOCS[id]!.title}</h3>
+            <DocumentCard key={id} id={id}>
               <Button onClick={() => get(id)}><Download /> DOCX</Button>
-            </div>
+            </DocumentCard>
           ))}
         </div>
       )}
