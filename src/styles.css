@@ -186,9 +186,9 @@ button:hover .document-card-hint, button:focus-visible .document-card-hint { ani
   max-height: 20rem; opacity: 1; min-height: 9rem; display: block;
   margin-top: 1.1rem;
   padding: 1.15rem 1.15rem 1.3rem;
-  border: 1px solid color-mix(in oklab, var(--primary) 55%, transparent);
+  border: 1px solid color-mix(in oklab, var(--primary) 85%, transparent);
   border-radius: .9rem;
-  background: rgb(216 239 221 / .85);
+  background: rgb(216 239 221 / .9);
   color: var(--heading);
 }
 @media (prefers-reduced-motion: reduce) { .wallet-card, .wallet-body { transition: none; } }
