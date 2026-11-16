@@ -264,10 +264,13 @@ function CatalogStep({ s, set }: P) {
           <div className="panel mb-4">
             <h3 className="text-lg font-bold">Корзина</h3>
             {s.cart.length === 0 ? <p className="mt-2 text-sm text-muted-foreground">Пока пусто.</p> : (
-              <ul className="mt-3 space-y-2 text-sm">
-                {s.cart.map((id) => (
-                  <li key={id} className="flex items-start justify-between gap-2">
-                    <span>{DOCS[id]!.title}</span>
+              <ul className="mt-3 text-sm">
+                {s.cart.map((id, i) => (
+                  <li key={id} className={`flex items-start justify-between gap-3 py-2.5 ${i > 0 ? "border-t border-border" : ""}`}>
+                    <span className="flex min-w-0 items-start gap-2.5">
+                      <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/12 text-[11px] font-bold text-primary">{i + 1}</span>
+                      <span>{DOCS[id]!.title}</span>
+                    </span>
                     <button aria-label="Убрать" onClick={() => toggle(id)}><X className="size-4 text-muted-foreground" /></button>
                   </li>
                 ))}
