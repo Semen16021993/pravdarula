@@ -138,6 +138,21 @@
 
 .onboarding-enter { animation: onboarding-enter 240ms ease-out; }
 
+.document-card { min-width: 0; perspective: 1200px; }
+.document-card-turn { position: relative; transform-style: preserve-3d; transition: transform 360ms ease; }
+.document-card[data-flipped="true"] .document-card-turn { transform: rotateY(180deg); }
+.document-card-front, .document-card-back { backface-visibility: hidden; }
+.document-card-front { display: flex; flex-direction: column; gap: 1rem; min-height: 164px; padding: 1.5rem; }
+.document-card-back { position: absolute; inset: 0; display: flex; flex-direction: column; transform: rotateY(180deg); padding: 1rem 1.5rem; }
+.document-card-compact .document-card-front { min-height: 144px; padding: 1rem; }
+.document-card-compact .document-card-back { padding: .75rem 1rem; }
+.document-card-description { scrollbar-width: thin; scrollbar-color: var(--primary) var(--secondary); }
+@media (min-width: 768px) {
+  .document-card-front { flex-direction: row; align-items: center; padding: 2rem; }
+  .document-card-compact .document-card-front { padding: 1rem; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .onboarding-enter { animation: none; }
+  .document-card-turn { transition: none; }
 }

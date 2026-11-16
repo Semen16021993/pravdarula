@@ -30,3 +30,4 @@ use the editor.
 <!-- LOVABLE:END -->
 
 - Keep the three-screen introduction in a separate presentation component before mounting the existing constructor; this preserves the order workflow and its saved state.
+- Use a shared DocumentCard with descriptions from a browser-safe catalog module wherever individual documents appear; this keeps flip behavior and fixed-size internal scrolling consistent without affecting purchase or download actions.
