@@ -9,7 +9,8 @@ import {
   type Mode, type Stage,
 } from "@/lib/catalog";
 import { DocumentCard } from "./DocumentCard";
-import { buildDoc, buildInstruction, demoForm, download, emptyForm, type FormData } from "@/lib/docgen";
+import { FileCabinet } from "./FileCabinet";
+import { buildDoc, buildInstruction, demoForm, download, downloadPdf, emptyForm, type FormData } from "@/lib/docgen";
 
 type Step = "mode" | "stage" | "form" | "offer" | "paid";
 type OrderStatus = "draft" | "pending" | "paid" | "failed";
@@ -335,6 +336,7 @@ function ComplexStep({ s, set }: P) {
 
 function PaidStep({ s, onReset }: { s: State; onReset: () => void }) {
   const get = (id: string) => download(buildDoc(id, s.form), DOCS[id]!.title);
+  const pdf = (id: string) => downloadPdf(id, s.form, DOCS[id]!.title);
   return (
     <section>
       <span className="chip">Оплачено · документы доступны</span>
@@ -343,7 +345,7 @@ function PaidStep({ s, onReset }: { s: State; onReset: () => void }) {
 
       {s.mode === "complex" ? (
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_340px]">
-          <RoadmapView stage={s.stage!} locked={false} onDoc={get} />
+          <FileCabinet sections={ROADMAP[s.stage!].map((st, i) => ({ label: `Шаг ${i + 1}. ${st.title}`, docs: st.docs }))} onDocx={get} onPdf={pdf} />
           <div className="panel h-fit">
             <h3 className="text-lg font-bold">Письменная инструкция</h3>
             <p className="mt-1 text-sm text-muted-foreground">Порядок действий, адресаты и способы подачи.</p>
@@ -351,13 +353,7 @@ function PaidStep({ s, onReset }: { s: State; onReset: () => void }) {
           </div>
         </div>
       ) : (
-        <div className="mt-6 space-y-3">
-          {s.purchased.map((id) => (
-            <DocumentCard key={id} id={id}>
-              <Button onClick={() => get(id)}><Download /> DOCX</Button>
-            </DocumentCard>
-          ))}
-        </div>
+        <div className="mt-6"><FileCabinet sections={[{ docs: s.purchased }]} onDocx={get} onPdf={pdf} /></div>
       )}
 
       <div className="panel mt-10 border-primary bg-secondary">

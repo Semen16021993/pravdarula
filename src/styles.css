@@ -168,3 +168,10 @@ button:hover .document-card-hint, button:focus-visible .document-card-hint { ani
 /* Flipped card grows to fit the full description (no inner scroll). */
 .document-card[data-flipped="true"] .document-card-back { position: relative; inset: auto; }
 .document-card[data-flipped="true"] .document-card-front { position: absolute; inset: 0; }
+
+.cabinet { border-radius: 1.25rem; border: 1px solid var(--border); background: var(--secondary); box-shadow: inset 0 2px 8px color-mix(in oklab, var(--foreground) 8%, transparent); overflow: hidden; }
+.cabinet-head { display: flex; align-items: center; gap: .5rem; padding: .85rem 1.25rem; background: var(--primary); color: var(--primary-foreground); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; font-size: .8rem; }
+.cabinet-divider { display: inline-block; margin-bottom: .75rem; padding: .3rem .9rem; border-radius: .5rem .5rem 0 0; background: var(--accent); color: var(--accent-foreground); font-size: .8rem; font-weight: 700; }
+.cabinet-folder { position: relative; margin-top: 1.4rem; border-radius: 0 .75rem .75rem .75rem; background: var(--card); border: 1px solid var(--border); box-shadow: 0 6px 14px -10px color-mix(in oklab, var(--foreground) 35%, transparent); transition: transform .2s; }
+.cabinet-folder:hover { transform: translateY(-3px); }
+.cabinet-tab { position: absolute; top: -1.35rem; left: -1px; padding: .15rem .9rem; border: 1px solid var(--border); border-bottom: none; border-radius: .5rem .5rem 0 0; background: var(--card); font-size: .75rem; font-weight: 700; color: var(--primary); }
