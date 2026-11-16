@@ -38,7 +38,7 @@ export function DocumentCard({ id, children, compact = false, recommended = fals
             <Button variant="ghost" size="icon" className="shrink-0" aria-label={`Вернуться: ${doc.title}`} title="Вернуться к документу" onClick={() => setFlipped(false)}><ArrowLeft /></Button>
           </div>
           <div id={descriptionId} tabIndex={flipped ? 0 : -1} role="region" aria-label={`Описание: ${doc.title}`} className="document-card-description mt-2 text-sm leading-relaxed" onKeyDown={(event) => { if (event.key === "Escape") setFlipped(false); }}>
-            {([["Что это?", details.what], ["Зачем он нужен", details.why], ["Когда используется", details.when], ["Как использовать", details.how]] as const).map(([title, text]) => <section key={title} className="mb-3"><h4 className="font-bold text-heading">{title}</h4><p className="mt-1 whitespace-pre-line">{text}</p></section>)}
+            {([["Что это за документ?", details.what], ["Зачем он нужен", details.why], ["Когда используется", details.when], ["Как использовать", details.how]] as const).map(([title, text]) => <section key={title} className="mb-3"><h4 className="font-bold text-heading">{title}</h4><p className="mt-1 whitespace-pre-line">{text}</p></section>)}
           </div>
         </div>
       </div>
