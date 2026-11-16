@@ -1,7 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import type { User } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
 import { Constructor } from "@/components/constructor/Constructor";
 import { Onboarding } from "@/components/constructor/Onboarding";
+import { Login } from "@/components/constructor/Login";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -18,6 +21,20 @@ export const Route = createFileRoute("/")({
 });
 
 function DocumentEntry() {
+  const [user, setUser] = useState<User | null | undefined>(undefined);
   const [started, setStarted] = useState(false);
-  return started ? <Constructor /> : <Onboarding onComplete={() => { window.scrollTo(0, 0); setStarted(true); }} />;
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+      if (event === "SIGNED_OUT") setStarted(false);
+    });
+    supabase.auth.getSession().then(({ data: d }) => setUser(d.session?.user ?? null));
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  if (user === undefined) return <div className="min-h-screen" />;
+  if (!user) return <Login />;
+  return started
+    ? <Constructor userId={user.id} email={user.email ?? ""} />
+    : <Onboarding onComplete={() => { window.scrollTo(0, 0); setStarted(true); }} />;
 }
