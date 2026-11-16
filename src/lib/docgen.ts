@@ -14,6 +14,25 @@ export const emptyForm: FormData = {
   courtAddress: "", passport: "",
 };
 
+/** Демо-данные для удобства тестирования: подставляются, пока анкета пустая. */
+export const demoForm: FormData = {
+  fio: "Иванов Иван Иванович",
+  phone: "+7 (900) 123-45-67",
+  email: "ivanov@example.ru",
+  address: "125009, г. Москва, ул. Тверская, д. 1, кв. 10",
+  birthYear: "1985",
+  carNumber: "А123БВ777",
+  accidentDate: "2026-10-05",
+  accidentPlace: "г. Москва, ул. Ленина, 5, парковка ТЦ",
+  accidentTime: "18:30",
+  victim: "Петров Пётр Петрович",
+  gibddName: "ОГИБДД ОМВД России по району Арбат г. Москвы",
+  gibddAddress: "119019, г. Москва, ул. Воздвиженка, д. 10",
+  courtName: "Тверской районный суд г. Москвы",
+  courtAddress: "125009, г. Москва, ул. Тверская, д. 7",
+  passport: "4500 123456, выдан ОМВД России по району Арбат г. Москвы 10.03.2010",
+};
+
 /** Пустое поле не угадывается — остаётся явное место для ручного заполнения. */
 export function v(value: string, placeholder: string): string {
   return value.trim() ? value.trim() : `[${placeholder}]`;
