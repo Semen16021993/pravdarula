@@ -170,13 +170,13 @@ button:hover .document-card-hint, button:focus-visible .document-card-hint { ani
 .document-card[data-flipped="true"] .document-card-front { position: absolute; inset: 0; }
 
 .wallet { max-width: 34rem; padding-bottom: 1rem; }
-.wallet-card { position: relative; margin-top: -2.4rem; padding: 1.1rem 1.25rem 2.6rem; border-radius: 1.1rem; color: var(--primary-foreground); box-shadow: 0 -6px 18px -8px color-mix(in oklab, var(--foreground) 45%, transparent); transition: margin .35s ease, transform .25s ease; }
+.wallet-card { --tone-a: var(--chart-3); --tone-b: var(--heading); position: relative; margin-top: -2.4rem; padding: 1.1rem 1.25rem 2.6rem; border-radius: 1.1rem; color: var(--primary-foreground); box-shadow: 0 -6px 18px -8px color-mix(in oklab, var(--foreground) 45%, transparent); transition: margin .35s ease, transform .25s ease; background: linear-gradient(135deg, var(--tone-a), var(--tone-b)); }
 .wallet-card:first-child { margin-top: 0; }
 .wallet-card:hover { transform: translateY(-4px); }
-.wallet-card[data-tone="1"] { background: linear-gradient(135deg, var(--primary), var(--heading)); }
-.wallet-card[data-tone="2"] { background: linear-gradient(135deg, var(--chart-2), var(--primary)); }
-.wallet-card[data-tone="3"] { background: linear-gradient(135deg, var(--accent), var(--chart-5)); color: var(--accent-foreground); }
-.wallet-card[data-tone="0"] { background: linear-gradient(135deg, var(--chart-3), var(--heading)); }
+.wallet-card[data-tone="1"] { --tone-a: var(--primary); --tone-b: var(--heading); }
+.wallet-card[data-tone="2"] { --tone-a: var(--chart-2); --tone-b: var(--primary); }
+.wallet-card[data-tone="3"] { --tone-a: var(--accent); --tone-b: var(--chart-5); color: var(--accent-foreground); }
+.wallet-card[data-tone="0"] { --tone-a: var(--chart-3); --tone-b: var(--heading); }
 .wallet-num { font-size: .82rem; font-weight: 700; opacity: .95; letter-spacing: .06em; font-variant-numeric: tabular-nums; }
 .wallet-body { display: grid; grid-template-rows: 0fr; overflow: hidden; max-height: 0; opacity: 0; transition: max-height .4s ease, opacity .3s ease; }
 .wallet-body h3 { color: inherit; }
@@ -186,9 +186,11 @@ button:hover .document-card-hint, button:focus-visible .document-card-hint { ani
   max-height: 20rem; opacity: 1; min-height: 9rem; display: block;
   margin-top: 1.1rem;
   padding: 1.15rem 1.15rem 1.3rem;
-  border: 1px solid var(--primary);
+  border: 1px solid color-mix(in oklab, var(--primary-foreground) 34%, transparent);
   border-radius: .9rem;
-  background: rgb(216 239 221 / .9);
-  color: var(--heading);
+  background:
+    linear-gradient(165deg, rgb(216 239 221 / .10), rgb(216 239 221 / .02)),
+    linear-gradient(135deg, color-mix(in oklab, var(--tone-a) 38%, var(--heading)), color-mix(in oklab, var(--tone-b) 46%, var(--heading)));
+  color: var(--primary-foreground);
 }
 @media (prefers-reduced-motion: reduce) { .wallet-card, .wallet-body { transition: none; } }
