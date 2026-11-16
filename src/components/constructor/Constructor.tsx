@@ -93,7 +93,7 @@ type P = { s: State; set: (p: Partial<State>) => void };
 function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
   return (
     <section>
-      <h1 className="max-w-3xl text-4xl font-bold leading-tight md:text-6xl">Документы для ГИБДД и суда&nbsp;</h1>
+      <h1 className="max-w-none whitespace-nowrap text-3xl font-bold leading-tight md:text-5xl">Документы для ГИБДД и суда</h1>
       <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
         Для водителей, которым грозит ч. 2 ст. 12.27 КоАП РФ. Выберите стадию, заполните анкету один раз — получите готовые документы с вашими данными, соответствующие стадии дела и инстанции рассмотрения.
       </p>
