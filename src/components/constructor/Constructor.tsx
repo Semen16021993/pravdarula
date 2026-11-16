@@ -44,8 +44,8 @@ export function Constructor() {
     try {
       const raw = localStorage.getItem(KEY);
       const saved = raw ? { ...initial, ...JSON.parse(raw) } : initial;
-      // Пока анкета пустая — подставляем демо-данные, чтобы не заполнять вручную.
-      if (Object.values(saved.form).every((val) => !String(val).trim())) saved.form = demoForm;
+      // Демо-данные: подставляем во все пустые поля, чтобы не заполнять вручную.
+      saved.form = { ...demoForm, ...Object.fromEntries(Object.entries(saved.form).filter(([, v]) => String(v).trim())) };
       setS(saved);
     } catch { /* ignore */ }
     setLoaded(true);
