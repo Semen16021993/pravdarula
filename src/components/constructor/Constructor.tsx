@@ -54,7 +54,7 @@ export function Constructor() {
   useEffect(() => { window.scrollTo({ top: 0, behavior: "smooth" }); }, [s.step]);
 
   const set = (p: Partial<State>) => setS((x) => ({ ...x, ...p }));
-  const reset = () => setS(initial);
+  const reset = () => setS({ ...initial, form: { ...demoForm } });
 
   const steps: Step[] = ["mode", "stage", "form", "offer", "paid"];
   const idx = steps.indexOf(s.step);
