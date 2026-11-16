@@ -119,7 +119,7 @@ export function Constructor({ userId, email }: { userId: string; email: string }
   );
 }
 
-type P = { s: State; set: (p: Partial<State>) => void; onPaid?: (p: Purchase) => void };
+type P = { s: State; set: (p: Partial<State>) => void; onPaid?: ((p: Purchase) => void) | undefined };
 
 function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
   return (
