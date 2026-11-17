@@ -87,7 +87,7 @@ export function Constructor({ userId, email }: { userId: string; email: string }
         </button>
         <div className="flex items-center gap-2">
           <Button size="sm" variant={s.step === "cabinet" ? "default" : "outline"} onClick={() => set({ step: "cabinet" })}><FolderOpen /> Мои документы{purchases.length ? ` (${purchases.length})` : ""}</Button>
-          <Button asChild size="sm" variant="ghost" className="hidden md:inline-flex"><a href="tel:+79105086284">8 910 508 6284</a></Button>
+          <Button asChild size="sm" variant="ghost" className="hidden md:inline-flex"><a href="tel:+79105086284">Помощь</a></Button>
           <Button size="sm" variant="ghost" onClick={signOut} title={email} aria-label="Выйти"><LogOut /><span className="hidden sm:inline">Выйти</span></Button>
         </div>
       </header>
