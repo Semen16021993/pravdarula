@@ -342,8 +342,8 @@ function ComplexStep({ s, set, onPaid }: P) {
   const sum = cartTotal(items);
   return (
     <section>
-      <h1 className="text-3xl font-bold md:text-4xl">Ваш Roadmap — стадия {stage}</h1>
-      <p className="mt-2 text-muted-foreground">Документы откроются после оплаты комплекса.</p>
+      <h1 className="text-3xl font-bold md:text-4xl">Порядок действий{"\u00a0"}</h1>
+      <p className="mt-2 text-muted-foreground">Документы и ДЕТАЛЬНАЯ ИНСТРУКЦИЯ откроются после оплаты комплекса.</p>
       <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_340px]">
         <RoadmapView stage={stage} locked />
         <div>
