@@ -133,7 +133,7 @@ function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
           <FileText className="size-9 text-primary" />
           <h2 className="mt-4 text-2xl font-bold">Отдельные документы</h2>
           <p className="mt-2 text-muted-foreground">Если вы юрист или хорошо разбираетесь в вопросах КоАП - выберите нужные документы своей стадии, отправьте в корзину и оплатите одним платежом.</p>
-          <p className="mt-3 text-sm text-muted-foreground">Roadmap и письменная инструкция <b>не входят</b>.</p>
+          <p className="mt-3 text-sm text-muted-foreground">План действий и письменная инструкция <b>не входят</b>.</p>
           <p className="mt-4 font-bold text-heading">от 790 ₽ за документ</p>
           <Button className="mt-6" size="lg" variant="outline" onClick={() => onPick("single")}>Выбрать документы</Button>
         </div>
