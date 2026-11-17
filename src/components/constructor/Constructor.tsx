@@ -388,7 +388,7 @@ function PaidStep({ s, onReset }: { s: State; onReset: () => void }) {
 
       {s.mode === "complex" ? (
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_340px]">
-          <FileCabinet sections={roadmapFrom(s.stage!).flatMap((g) => g.steps.map((st, i) => ({ label: `Стадия ${g.stage} · Шаг ${i + 1}. ${st.title}`, docs: st.docs })))} onDocx={get} onPdf={pdf} />
+          <FileCabinet sections={[{ docs: complexDocs(s.stage!) }]} onDocx={get} onPdf={pdf} />
           <div className="panel h-fit">
             <h3 className="text-lg font-bold">Письменная инструкция</h3>
             <p className="mt-1 text-sm text-muted-foreground">Порядок действий, адресаты и способы подачи.</p>
@@ -435,7 +435,7 @@ function CabinetStep({ form, email, purchases, onMore }: { form: FormData; email
               </h2>
               <div className="mt-4 grid gap-6 lg:grid-cols-[1fr_340px]">
                 <FileCabinet
-                  sections={p.mode === "complex" ? roadmapFrom(p.stage).flatMap((g) => g.steps.map((st, i) => ({ label: `Стадия ${g.stage} · Шаг ${i + 1}. ${st.title}`, docs: st.docs }))) : [{ docs: p.docs }]}
+                  sections={[{ docs: p.mode === "complex" ? complexDocs(p.stage) : p.docs }]}
                   onDocx={get} onPdf={pdf}
                 />
                 {p.mode === "complex" && (
