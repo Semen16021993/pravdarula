@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, Check, Download, FileText, FolderOpen, Lock, LogOut, Map, ShoppingCart, X } from "lucide-react";
+import { ArrowLeft, Check, Download, FileText, FolderDown, FolderOpen, Loader2, Lock, LogOut, Map, ShoppingCart, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { addPurchase, loadCabinet, saveForm, type Purchase } from "@/lib/cabinet";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import {
 } from "@/lib/catalog";
 import { DocumentCard } from "./DocumentCard";
 import { FileCabinet } from "./FileCabinet";
-import { buildDoc, buildInstruction, demoForm, download, downloadPdf, emptyForm, type FormData } from "@/lib/docgen";
+import { buildDoc, buildInstruction, demoForm, download, downloadPdf, downloadZip, emptyForm, type FormData } from "@/lib/docgen";
 
 type Step = "mode" | "stage" | "form" | "offer" | "paid" | "cabinet";
 type OrderStatus = "draft" | "pending" | "paid" | "failed";
@@ -377,6 +377,25 @@ function ComplexStep({ s, set, onPaid }: P) {
   );
 }
 
+function ZipAllButton({ ids, form, instruction, name }: { ids: string[]; form: FormData; instruction?: Stage; name: string }) {
+  const [busy, setBusy] = useState(false);
+  const go = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await downloadZip(ids, form, { instruction, archiveName: name });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Button size="lg" variant="outline" disabled={busy} onClick={go}>
+      {busy ? <Loader2 className="animate-spin" /> : <FolderDown />}
+      {busy ? "Собираю архив…" : "Скачать всё одним архивом"}
+    </Button>
+  );
+}
+
 function PaidStep({ s, onReset }: { s: State; onReset: () => void }) {
   const get = (id: string) => download(buildDoc(id, s.form), DOCS[id]!.title);
   const pdf = (id: string) => downloadPdf(id, s.form, DOCS[id]!.title);
@@ -393,10 +412,16 @@ function PaidStep({ s, onReset }: { s: State; onReset: () => void }) {
             <h3 className="text-lg font-bold">Письменная инструкция</h3>
             <p className="mt-1 text-sm text-muted-foreground">Порядок действий, адресаты и способы подачи.</p>
             <Button className="mt-4 w-full" onClick={() => download(buildInstruction(s.stage!, s.form), "Инструкция Право Руля")}><Download /> Скачать инструкцию</Button>
+            <div className="mt-3">
+              <ZipAllButton ids={complexDocs(s.stage!)} form={s.form} instruction={s.stage!} name="Комплекс Право Руля" />
+            </div>
           </div>
         </div>
       ) : (
-        <div className="mt-6"><FileCabinet sections={[{ docs: s.purchased }]} onDocx={get} onPdf={pdf} /></div>
+        <div className="mt-6">
+          <FileCabinet sections={[{ docs: s.purchased }]} onDocx={get} onPdf={pdf} />
+          {s.purchased.length > 1 && <div className="mt-6"><ZipAllButton ids={s.purchased} form={s.form} name="Документы Право Руля" /></div>}
+        </div>
       )}
 
       <div className="panel mt-10 border-primary bg-secondary">
@@ -442,7 +467,13 @@ function CabinetStep({ form, email, purchases, onMore }: { form: FormData; email
                   <div className="panel h-fit">
                     <h3 className="text-lg font-bold">Письменная инструкция</h3>
                     <Button className="mt-4 w-full" onClick={() => download(buildInstruction(p.stage, form), "Инструкция Право Руля")}><Download /> Скачать инструкцию</Button>
+                    <div className="mt-3">
+                      <ZipAllButton ids={complexDocs(p.stage)} form={form} instruction={p.stage} name="Комплекс Право Руля" />
+                    </div>
                   </div>
+                )}
+                {p.mode !== "complex" && p.docs.length > 1 && (
+                  <div className="mt-4 lg:col-span-2"><ZipAllButton ids={p.docs} form={form} name="Документы Право Руля" /></div>
                 )}
               </div>
             </div>

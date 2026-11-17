@@ -133,8 +133,38 @@ export async function download(doc: Document, name: string) {
 
 const fileName = (name: string, ext: string) => name.replace(/[^\p{L}\p{N} ._-]/gu, "") + ext;
 
+function saveBlob(blob: Blob, name: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+
+/** Все документы одним ZIP-архивом: DOCX + PDF каждого, плюс инструкция для комплекса. */
+export async function downloadZip(ids: string[], f: FormData, opts?: { instruction?: Stage | undefined; archiveName?: string | undefined }) {
+  const { default: JSZip } = await import("jszip");
+  const zip = new JSZip();
+  const used = new Set<string>();
+  const put = (name: string, data: Blob | Uint8Array) => {
+    let n = name, i = 2;
+    while (used.has(n)) n = name.replace(/(\.\w+)$/, ` (${i++})$1`);
+    used.add(n);
+    zip.file(n, data);
+  };
+  for (const id of ids) {
+    const title = DOCS[id]!.title;
+    put(fileName(title, ".docx"), await Packer.toBlob(buildDoc(id, f)));
+    put(fileName(title, ".pdf"), await buildPdfBytes(id, f));
+  }
+  if (opts?.instruction) {
+    put(fileName("Инструкция Право Руля", ".docx"), await Packer.toBlob(buildInstruction(opts.instruction, f)));
+  }
+  const blob = await zip.generateAsync({ type: "blob" });
+  saveBlob(blob, fileName(opts?.archiveName ?? "Документы Право Руля", ".zip"));
+}
+
 /** PDF с тем же содержимым, что и DOCX (шрифт с кириллицей из /fonts). */
-export async function downloadPdf(id: string, f: FormData, name: string) {
+export async function buildPdfBytes(id: string, f: FormData): Promise<Uint8Array> {
   const [{ PDFDocument, rgb }, fontkit] = await Promise.all([import("pdf-lib"), import("@pdf-lib/fontkit").then((m) => m.default)]);
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
@@ -163,8 +193,10 @@ export async function downloadPdf(id: string, f: FormData, name: string) {
   y -= lh;
   draw(`«___» __________ 20__ г.        ____________ / ${v(f.fio, "ФИО")}`, L);
   pdf.getPages().forEach((pg, i) => { const n = String(i + 1); pg.drawText(n, { x: W / 2 - reg.widthOfTextAtSize(n, 10) / 2, y: 30, size: 10, font: reg }); });
-  const bytes = await pdf.save();
-  const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/pdf" }));
-  const a = document.createElement("a"); a.href = url; a.download = fileName(name, ".pdf"); a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 30000);
+  return pdf.save();
+}
+
+export async function downloadPdf(id: string, f: FormData, name: string) {
+  const bytes = await buildPdfBytes(id, f);
+  saveBlob(new Blob([bytes as BlobPart], { type: "application/pdf" }), fileName(name, ".pdf"));
 }
