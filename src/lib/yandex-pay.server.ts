@@ -1,4 +1,6 @@
-import { DOCS, COMPLEX_PRICE, STAGES, type Mode, type Stage } from "./catalog";
+import type { Mode, Stage } from "./catalog";
+
+export const PAY_ITEM_TITLE = "Комплект юридических документов для защиты по административному правонарушению";
 
 function base() {
   return process.env['YANDEX_PAY_ENV'] === "live" ? "https://pay.yandex.ru" : "https://sandbox.pay.yandex.ru";
@@ -11,9 +13,8 @@ function headers() {
 const money = (n: number) => n.toFixed(2);
 
 export async function createYandexOrder(o: { id: string; mode: Mode; stage: Stage; docs: string[]; amount: number; origin: string }) {
-  const items = o.mode === "complex"
-    ? [{ productId: `complex-${o.stage}`, title: `Комплект документов по ст. 12.27 КоАП, ${STAGES.find((s) => s.id === o.stage)?.short ?? `стадия ${o.stage}`}`.slice(0, 250), quantity: { count: "1" }, total: money(COMPLEX_PRICE[o.stage]) }]
-    : o.docs.map((id) => ({ productId: id, title: DOCS[id]!.title.slice(0, 250), quantity: { count: "1" }, total: money(DOCS[id]!.price) }));
+  // Одна позиция на всю сумму — название задал владелец.
+  const items = [{ productId: o.mode === "complex" ? `complex-${o.stage}` : "documents", title: PAY_ITEM_TITLE, quantity: { count: "1" }, total: money(o.amount) }];
   const res = await fetch(`${base()}/api/merchant/v1/orders`, {
     method: "POST",
     headers: headers(),
