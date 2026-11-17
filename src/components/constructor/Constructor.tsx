@@ -140,7 +140,7 @@ function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
         <div className="panel flex flex-col border-primary bg-secondary">
           <div className="flex items-start justify-between"><Map className="size-9 text-primary" /><span className="chip">Всё вместе</span></div>
           <h2 className="mt-4 text-2xl font-bold">Комплексное сопровождение</h2>
-          <p className="mt-2 text-muted-foreground">Персональный Roadmap по шагам, весь комплект документов к каждому шагу и письменная инструкция: когда, куда и как подавать.</p>
+          <p className="mt-2 text-muted-foreground">Персональный план действий по шагам, весь комплект документов к каждому шагу и письменная инструкция: когда, куда и как подавать.</p>
           <p className="mt-3 text-sm text-muted-foreground">Оплачивается <b>одной суммой</b>.</p>
           <p className="mt-4 font-bold text-heading">от {rub(COMPLEX_PRICE[1])} за комплекс</p>
           <Button className="mt-6" size="lg" onClick={() => onPick("complex")}>Собрать комплекс</Button>
