@@ -31,3 +31,16 @@ describe("каталог", () => {
     expect(complexDocs(3)).toEqual(complexDocs(3));
   });
 });
+
+import { priceOrder } from "./catalog";
+describe("priceOrder", () => {
+  it("комплекс стоит цену стадии", () => {
+    expect(priceOrder("complex", 1, []).amount).toBe(3990);
+    expect(priceOrder("complex", 3, ["x"]).amount).toBe(7990);
+  });
+  it("отбрасывает чужие и повторные документы", () => {
+    const r = priceOrder("single", 1, ["gibdd_familiarize", "gibdd_familiarize", "fake"]);
+    expect(r.docs).toEqual(["gibdd_familiarize"]);
+    expect(r.amount).toBe(990);
+  });
+});

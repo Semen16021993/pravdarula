@@ -10,33 +10,44 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPublicYandexPayWebhookRouteImport } from './routes/api/public/yandex-pay-webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicYandexPayWebhookRoute =
+  ApiPublicYandexPayWebhookRouteImport.update({
+    id: '/api/public/yandex-pay-webhook',
+    path: '/api/public/yandex-pay-webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/public/yandex-pay-webhook': typeof ApiPublicYandexPayWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/public/yandex-pay-webhook': typeof ApiPublicYandexPayWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/public/yandex-pay-webhook': typeof ApiPublicYandexPayWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/api/public/yandex-pay-webhook'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/api/public/yandex-pay-webhook'
+  id: '__root__' | '/' | '/api/public/yandex-pay-webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiPublicYandexPayWebhookRoute: typeof ApiPublicYandexPayWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +59,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/yandex-pay-webhook': {
+      id: '/api/public/yandex-pay-webhook'
+      path: '/api/public/yandex-pay-webhook'
+      fullPath: '/api/public/yandex-pay-webhook'
+      preLoaderRoute: typeof ApiPublicYandexPayWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiPublicYandexPayWebhookRoute: ApiPublicYandexPayWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

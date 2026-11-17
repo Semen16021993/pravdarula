@@ -185,3 +185,11 @@ export function complexDocs(stage: Stage): string[] {
 }
 
 export const rub = (n: number) => n.toLocaleString("ru-RU") + " ₽";
+
+/** Состав и сумма заказа, пересчитанные по каталогу (используется на сервере при оплате). */
+export function priceOrder(mode: Mode, stage: Stage, docs: string[]): { docs: string[]; amount: number } {
+  if (mode === "complex") return { docs: complexDocs(stage), amount: COMPLEX_PRICE[stage] };
+  const allowed = new Set(STAGE_DOCS[stage]);
+  const clean = [...new Set(docs)].filter((id) => allowed.has(id));
+  return { docs: clean, amount: cartTotal(clean) };
+}

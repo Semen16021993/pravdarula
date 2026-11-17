@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Check, Download, FileText, FolderDown, FolderOpen, Loader2, Lock, LogOut, Map, ShoppingCart, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { addPurchase, loadCabinet, saveForm, type Purchase } from "@/lib/cabinet";
+import { loadCabinet, saveForm, type Purchase } from "@/lib/cabinet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,7 @@ import {
   type Mode, type Stage,
 } from "@/lib/catalog";
 import { DocumentCard } from "./DocumentCard";
+import { checkPayment, createPayment } from "@/lib/payments.functions";
 import { FileCabinet } from "./FileCabinet";
 import { buildDoc, buildInstruction, demoForm, download, downloadPdf, downloadZip, emptyForm, type FormData } from "@/lib/docgen";
 
@@ -66,7 +67,33 @@ export function Constructor({ userId, email }: { userId: string; email: string }
     const t = setTimeout(() => { saveForm(userId, s.form); }, 800);
     return () => clearTimeout(t);
   }, [s.form, loaded, userId]);
-  const onPaid = async (p: Purchase) => { setPurchases(await addPurchase(userId, p)); };
+  const onPaid = async (_p: Purchase) => { setPurchases((await loadCabinet(userId)).purchases); };
+  const [checking, setChecking] = useState<null | "wait" | "fail">(null);
+  useEffect(() => {
+    if (!loaded) return;
+    const q = new URLSearchParams(window.location.search);
+    const orderId = q.get("order");
+    if (!orderId) return;
+    window.history.replaceState(null, "", window.location.pathname);
+    setChecking("wait");
+    let stop = false; let tries = 0;
+    const tick = async () => {
+      if (stop) return;
+      tries++;
+      try {
+        const r = await checkPayment({ data: { orderId } });
+        if (r.status === "paid" && r.mode && r.stage) {
+          setPurchases((await loadCabinet(userId)).purchases);
+          setS((x) => ({ ...x, mode: r.mode, stage: r.stage, purchased: r.docs, cart: [], status: "paid", step: "paid" }));
+          setChecking(null); return;
+        }
+        if (r.status === "failed") { setChecking("fail"); setS((x) => ({ ...x, status: "failed" })); return; }
+      } catch { /* retry */ }
+      if (tries < 40) setTimeout(tick, 3000); else setChecking("fail");
+    };
+    tick();
+    return () => { stop = true; };
+  }, [loaded]);
   const signOut = async () => { await supabase.auth.signOut(); };
   useEffect(() => { window.scrollTo({ top: 0, behavior: "smooth" }); }, [s.step]);
 
@@ -107,6 +134,12 @@ export function Constructor({ userId, email }: { userId: string; email: string }
           </div>
         )}
 
+        {checking && (
+          <div className="panel mb-6 flex items-center gap-3">
+            {checking === "wait" ? <><Loader2 className="animate-spin" /> Проверяем оплату… Обычно это занимает несколько секунд.</> :
+              <><X className="text-destructive" /> Оплата не подтверждена, документы не открыты. Можно попробовать оплатить ещё раз. <Button size="sm" variant="ghost" onClick={() => setChecking(null)}>Закрыть</Button></>}
+          </div>
+        )}
         {s.step === "mode" && <ModeStep onPick={(mode) => set({ mode, step: "stage" })} />}
         {s.step === "stage" && <StageStep s={s} set={set} />}
         {s.step === "form" && <FormStep s={s} set={set} />}
@@ -242,24 +275,27 @@ function FormStep({ s, set }: P) {
   );
 }
 
-function PayBox({ total, items, s, set, onPaid }: P & { total: number; items: string[] }) {
-  const pay = (ok: boolean) => {
-    set({ status: "pending" });
-    setTimeout(() => {
-      set(ok ? { status: "paid", purchased: items, step: "paid" } : { status: "failed" });
-      if (ok) onPaid?.({ mode: s.mode!, stage: s.stage!, docs: items, at: new Date().toISOString() });
-    }, 900);
+function PayBox({ total, items, s, set }: P & { total: number; items: string[] }) {
+  const [err, setErr] = useState("");
+  const pay = async () => {
+    setErr(""); set({ status: "pending" });
+    try {
+      const { paymentUrl } = await createPayment({ data: { mode: s.mode!, stage: s.stage!, docs: items, origin: window.location.origin } });
+      window.location.href = paymentUrl;
+    } catch (e) {
+      set({ status: "failed" });
+      setErr(e instanceof Error ? e.message : "Не удалось перейти к оплате");
+    }
   };
   return (
     <div className="panel lg:sticky lg:top-6">
       <p className="text-sm text-muted-foreground">К оплате</p>
       <p className="font-serif text-4xl font-bold text-heading">{rub(total)}</p>
-      {s.status === "failed" && <p className="mt-3 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">Оплата не подтверждена — доступ не открыт. Попробуйте ещё раз.</p>}
-      <Button className="mt-5 w-full" size="lg" disabled={!items.length || s.status === "pending"} onClick={() => pay(true)}>
-        {s.status === "pending" ? "Ожидаем оплату…" : "Оплатить"}
+      {s.status === "failed" && <p className="mt-3 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{err || "Оплата не подтверждена — доступ не открыт. Попробуйте ещё раз."}</p>}
+      <Button className="mt-5 w-full" size="lg" disabled={!items.length || s.status === "pending"} onClick={pay}>
+        {s.status === "pending" ? <><Loader2 className="animate-spin" /> Переходим к оплате…</> : "Оплатить"}
       </Button>
-      <button className="mt-3 w-full text-xs text-muted-foreground underline" onClick={() => pay(false)}>Тест: смоделировать ошибку оплаты</button>
-      <p className="mt-3 text-xs text-muted-foreground">Демо-оплата: платёжная система ещё не подключена.</p>
+      <p className="mt-3 text-xs text-muted-foreground">Оплата через Яндекс Пэй: картой, СБП или частями со Сплитом.</p>
     </div>
   );
 }
