@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  COMPLEX_PRICE, DOCS, ROADMAP, STAGES, cartTotal, complexDocs, docsForStage, isRecommended, rub,
+  COMPLEX_PRICE, DOCS, STAGES, cartTotal, complexDocs, docsForStage, isRecommended, roadmapFrom, rub,
   type Mode, type Stage,
 } from "@/lib/catalog";
 import { DocumentCard } from "./DocumentCard";
@@ -311,28 +311,42 @@ function CatalogStep({ s, set, onPaid }: P) {
 }
 
 function RoadmapView({ stage, locked, onDoc }: { stage: Stage; locked: boolean; onDoc?: (id: string) => void }) {
+  const groups = roadmapFrom(stage);
+  let n = 0;
   return (
-    <ol className="relative space-y-6 border-l-2 border-primary/30 pl-8">
-      {ROADMAP[stage].map((st, i) => (
-        <li key={i} className="relative">
-          <span className="absolute -left-[3.05rem] flex size-9 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground">{i + 1}</span>
-          <div className="panel">
-            <span className="text-xs font-bold uppercase tracking-wide text-primary">{st.when}</span>
-            <h3 className="mt-1 text-xl font-bold">{st.title}</h3>
-            <p className="mt-1 text-muted-foreground">{st.why}</p>
-            {st.docs.length > 0 && (
-              <div className="mt-4 grid gap-3">
-                {st.docs.map((d) => (
-                  <DocumentCard key={d} id={d} compact>
-                    {locked ? <Lock className="size-4 text-muted-foreground" aria-label="Откроется после оплаты" /> : <Button size="sm" onClick={() => onDoc?.(d)}><Download /> DOCX</Button>}
-                  </DocumentCard>
-                ))}
-              </div>
-            )}
-          </div>
-        </li>
+    <div className="space-y-10">
+      {groups.map((g) => (
+        <div key={g.stage}>
+          <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-muted-foreground">
+            Стадия {g.stage} · {STAGES.find((x) => x.id === g.stage)?.short}
+          </h2>
+          <ol className="relative space-y-6 border-l-2 border-primary/30 pl-8">
+            {g.steps.map((st, i) => {
+              n += 1;
+              return (
+                <li key={i} className="relative">
+                  <span className="absolute -left-[3.05rem] flex size-9 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground">{n}</span>
+                  <div className="panel">
+                    <span className="text-xs font-bold uppercase tracking-wide text-primary">{st.when}</span>
+                    <h3 className="mt-1 text-xl font-bold">{st.title}</h3>
+                    <p className="mt-1 text-muted-foreground">{st.why}</p>
+                    {st.docs.length > 0 && (
+                      <div className="mt-4 grid gap-3">
+                        {st.docs.map((d) => (
+                          <DocumentCard key={d} id={d} compact>
+                            {locked ? <Lock className="size-4 text-muted-foreground" aria-label="Откроется после оплаты" /> : <Button size="sm" onClick={() => onDoc?.(d)}><Download /> DOCX</Button>}
+                          </DocumentCard>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
       ))}
-    </ol>
+    </div>
   );
 }
 
@@ -374,7 +388,7 @@ function PaidStep({ s, onReset }: { s: State; onReset: () => void }) {
 
       {s.mode === "complex" ? (
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_340px]">
-          <FileCabinet sections={ROADMAP[s.stage!].map((st, i) => ({ label: `Шаг ${i + 1}. ${st.title}`, docs: st.docs }))} onDocx={get} onPdf={pdf} />
+          <FileCabinet sections={roadmapFrom(s.stage!).flatMap((g) => g.steps.map((st, i) => ({ label: `Стадия ${g.stage} · Шаг ${i + 1}. ${st.title}`, docs: st.docs })))} onDocx={get} onPdf={pdf} />
           <div className="panel h-fit">
             <h3 className="text-lg font-bold">Письменная инструкция</h3>
             <p className="mt-1 text-sm text-muted-foreground">Порядок действий, адресаты и способы подачи.</p>
@@ -421,7 +435,7 @@ function CabinetStep({ form, email, purchases, onMore }: { form: FormData; email
               </h2>
               <div className="mt-4 grid gap-6 lg:grid-cols-[1fr_340px]">
                 <FileCabinet
-                  sections={p.mode === "complex" ? ROADMAP[p.stage].map((st, i) => ({ label: `Шаг ${i + 1}. ${st.title}`, docs: st.docs })) : [{ docs: p.docs }]}
+                  sections={p.mode === "complex" ? roadmapFrom(p.stage).flatMap((g) => g.steps.map((st, i) => ({ label: `Стадия ${g.stage} · Шаг ${i + 1}. ${st.title}`, docs: st.docs }))) : [{ docs: p.docs }]}
                   onDocx={get} onPdf={pdf}
                 />
                 {p.mode === "complex" && (

@@ -175,8 +175,13 @@ export const ROADMAP: Record<Stage, RoadmapStep[]> = {
   ],
 };
 
+/** Комплекс «под ключ» покрывает стадии от текущей до конца: 1 → 1,2,3; 2 → 2,3; 3 → 3. */
+export function roadmapFrom(stage: Stage): { stage: Stage; steps: RoadmapStep[] }[] {
+  return ([1, 2, 3] as Stage[]).filter((s) => s >= stage).map((s) => ({ stage: s, steps: ROADMAP[s] }));
+}
+
 export function complexDocs(stage: Stage): string[] {
-  return Array.from(new Set(ROADMAP[stage].flatMap((s) => s.docs)));
+  return Array.from(new Set(roadmapFrom(stage).flatMap((g) => g.steps.flatMap((s) => s.docs))));
 }
 
 export const rub = (n: number) => n.toLocaleString("ru-RU") + " ₽";

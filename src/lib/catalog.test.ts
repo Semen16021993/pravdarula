@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { STAGE_DOCS, isRecommended, cartTotal } from "./catalog";
+import { STAGE_DOCS, isRecommended, cartTotal, complexDocs, roadmapFrom } from "./catalog";
 
 describe("каталог", () => {
   it("стадии 1 и 2 — по три позиции, стадия 3 — восемь судебных", () => {
@@ -19,5 +19,15 @@ describe("каталог", () => {
   });
   it("корзина суммирует цены", () => {
     expect(cartTotal(["gibdd_familiarize", "receipt"])).toBe(990 + 790);
+  });
+  it("комплекс покрывает стадии от текущей до конца", () => {
+    expect(roadmapFrom(1).map((g) => g.stage)).toEqual([1, 2, 3]);
+    expect(roadmapFrom(2).map((g) => g.stage)).toEqual([2, 3]);
+    expect(roadmapFrom(3).map((g) => g.stage)).toEqual([3]);
+    expect(complexDocs(1)).toEqual(expect.arrayContaining(["receipt", "postpone_court", "objections_kit"]));
+    expect(complexDocs(2)).not.toContain("receipt");
+    expect(complexDocs(2)).not.toContain("victim_requalify_gibdd");
+    expect(complexDocs(2)).toContain("objections_kit");
+    expect(complexDocs(3)).toEqual(complexDocs(3));
   });
 });
