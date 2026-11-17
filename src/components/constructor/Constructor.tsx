@@ -236,7 +236,7 @@ function FormStep({ s, set }: P) {
         <span>Даю <a className="text-primary underline" href="#" onClick={(e) => e.preventDefault()}>согласие на обработку персональных данных</a> и принимаю <a className="text-primary underline" href="#" onClick={(e) => e.preventDefault()}>политику обработки</a>.</span>
       </label>
       <Button className="mt-6" size="lg" disabled={!s.consent} onClick={() => set({ step: "offer" })}>
-        {s.mode === "complex" ? "Построить Roadmap" : "Показать документы"}
+        {s.mode === "complex" ? "Далее" : "Показать документы"}
       </Button>
     </section>
   );
