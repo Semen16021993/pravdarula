@@ -52,8 +52,11 @@ if [[ -n "${APP_ORIGINS:-}" ]]; then ENVIRONMENT="${ENVIRONMENT},APP_ORIGINS=${A
 if [[ -n "${YANDEX_PAY_MERCHANT_ID:-}" ]]; then ENVIRONMENT="${ENVIRONMENT},YANDEX_PAY_MERCHANT_ID=${YANDEX_PAY_MERCHANT_ID}"; fi
 ARGS=(yc serverless function version create --function-id "$YC_FUNCTION_ID" --runtime nodejs22 --entrypoint index.handler --memory 256m --execution-timeout 30s --service-account-id "$YC_RUNTIME_SA_ID" --source-path yandex-api/pravdarula-api.zip --environment "$ENVIRONMENT" --secret "id=${YC_AUTH_SECRET_ID},key=AUTH_SECRET,environment-variable=AUTH_SECRET" --description "Pravdo Rulya deploy $(date -u +%Y-%m-%dT%H:%M:%SZ)")
 if [[ -n "${YC_PAY_SECRET_ID:-}" ]]; then
-  ARGS+=(--secret "id=${YC_PAY_SECRET_ID},key=YANDEX_PAY_API_KEY,environment-variable=YANDEX_PAY_API_KEY")
-  ARGS+=(--secret "id=${YC_PAY_SECRET_ID},key=YANDEX_PAY_SANDBOX_API_KEY,environment-variable=YANDEX_PAY_SANDBOX_API_KEY")
+  if [[ "${YANDEX_PAY_ENV}" == "live" ]]; then
+    ARGS+=(--secret "id=${YC_PAY_SECRET_ID},key=YANDEX_PAY_API_KEY,environment-variable=YANDEX_PAY_API_KEY")
+  else
+    ARGS+=(--secret "id=${YC_PAY_SECRET_ID},key=YANDEX_PAY_SANDBOX_API_KEY,environment-variable=YANDEX_PAY_SANDBOX_API_KEY")
+  fi
 fi
 "${ARGS[@]}"
 echo '== Update API Gateway =='
