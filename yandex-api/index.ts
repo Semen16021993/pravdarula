@@ -438,9 +438,9 @@ async function createPayment(sql: Sql, event: GatewayEvent, session: Session) {
   const amountKopecks = Math.round(priced.amount * 100);
   await sql`UPSERT INTO orders
     (id, user_id, mode, stage, docs, amount_kopecks, status, created_at)
-    VALUES (${orderId}, ${session.userId}, ${mode}, ${stage},
+    VALUES (${orderId}, ${session.userId}, ${mode}, CAST(${stage} AS Uint32),
       CAST(${JSON.stringify(priced.docs)} AS JsonDocument),
-      ${amountKopecks}, "pending", CurrentUtcTimestamp())`;
+      CAST(${amountKopecks} AS Uint64), "pending", CurrentUtcTimestamp())`;
 
   const paymentUrl = await createYandexOrder({
     id: orderId,
