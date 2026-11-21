@@ -38,7 +38,7 @@ npm run build:yandex
 ./deploy-yandex.sh
 ```
 
-Скрипт собирает SPA и Cloud Function, загружает файлы в Object Storage, публикует новую версию Cloud Function, обновляет API Gateway и проверяет `APP_BASE_URL/api/health`.
+Скрипт проверяет чистоту рабочей копии и ветку `main`, подтягивает последние изменения Lovable из GitHub, собирает SPA и Cloud Function, загружает файлы в Object Storage, публикует новую версию Cloud Function, обновляет API Gateway и проверяет `APP_BASE_URL/api/health`.
 
 ## Текущее состояние домена
 

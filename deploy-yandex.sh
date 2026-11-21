@@ -2,6 +2,21 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
+
+command -v git >/dev/null || { echo 'git is required.' >&2; exit 1; }
+if [[ "$(git branch --show-current)" != "main" ]]; then
+  echo "Deploy from the main branch (Lovable default). Current branch: $(git branch --show-current)" >&2
+  exit 1
+fi
+if [[ -n "$(git status --porcelain)" ]]; then
+  echo "Working tree has local changes. Commit or stash them before deploying." >&2
+  exit 1
+fi
+
+echo '== Sync latest Lovable changes from GitHub main =='
+git fetch origin
+git pull --ff-only origin main
+
 CONFIG="${DEPLOY_CONFIG:-.deploy-yandex.env}"
 if [[ ! -f "$CONFIG" ]]; then echo "Missing $CONFIG. Copy .deploy-yandex.env.example and fill the Yandex Cloud resource IDs." >&2; exit 1; fi
 # shellcheck disable=SC1090
