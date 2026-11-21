@@ -1,23 +1,45 @@
-import { supabase } from "@/integrations/supabase/client";
-import type { Json } from "@/integrations/supabase/types";
 import type { FormData } from "./docgen";
 import type { Mode, Stage } from "./catalog";
 
-export interface Purchase { mode: Mode; stage: Stage; docs: string[]; at: string }
-export interface Cabinet { form: Partial<FormData>; purchases: Purchase[] }
-
-export async function loadCabinet(userId: string): Promise<Cabinet> {
-  const { data } = await supabase.from("cabinets").select("form, purchases").eq("user_id", userId).maybeSingle();
-  return { form: (data?.form ?? {}) as Partial<FormData>, purchases: (data?.purchases ?? []) as unknown as Purchase[] };
+export interface Purchase {
+  mode: Mode;
+  stage: Stage;
+  docs: string[];
+  at: string;
+  orderId?: string;
 }
 
-export async function saveForm(userId: string, form: FormData) {
-  await supabase.from("cabinets").upsert({ user_id: userId, form: form as unknown as Json, updated_at: new Date().toISOString() });
+export interface Cabinet {
+  form: Partial<FormData>;
+  purchases: Purchase[];
 }
 
-export async function addPurchase(userId: string, p: Purchase) {
-  const cur = await loadCabinet(userId);
-  const purchases = [...cur.purchases, p];
-  await supabase.from("cabinets").upsert({ user_id: userId, purchases: purchases as unknown as Json, updated_at: new Date().toISOString() });
-  return purchases;
+async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, {
+    credentials: "same-origin",
+    cache: "no-store",
+    ...init,
+    headers: {
+      ...(init?.body ? { "Content-Type": "application/json" } : {}),
+      ...init?.headers,
+    },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "Не удалось сохранить данные.");
+  return data as T;
+}
+
+export async function loadCabinet(_userId?: string): Promise<Cabinet> {
+  const data = await apiRequest<Cabinet>("/api/cabinet");
+  return {
+    form: data.form ?? {},
+    purchases: Array.isArray(data.purchases) ? data.purchases : [],
+  };
+}
+
+export async function saveForm(_userId: string, form: FormData) {
+  await apiRequest<{ ok: boolean }>("/api/cabinet/form", {
+    method: "PUT",
+    body: JSON.stringify({ form }),
+  });
 }

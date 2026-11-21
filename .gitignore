@@ -35,3 +35,9 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# Yandex Cloud deployment artifacts
+.deploy-yandex.env
+yandex-api/node_modules/
+yandex-api/dist/
+yandex-api/*.zip

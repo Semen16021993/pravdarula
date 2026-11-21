@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Check, Download, FileText, FolderDown, FolderOpen, Loader2, Lock, LogOut, Map, ShoppingCart, X } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { loadCabinet, saveForm, type Purchase } from "@/lib/cabinet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,7 +93,7 @@ export function Constructor({ userId, email }: { userId: string; email: string }
     tick();
     return () => { stop = true; };
   }, [loaded]);
-  const signOut = async () => { await supabase.auth.signOut(); };
+  const signOut = async () => { await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }); window.location.reload(); };
   useEffect(() => { window.scrollTo({ top: 0, behavior: "smooth" }); }, [s.step]);
 
   const set = (p: Partial<State>) => setS((x) => ({ ...x, ...p }));
@@ -280,7 +279,7 @@ function PayBox({ total, items, s, set }: P & { total: number; items: string[] }
   const pay = async () => {
     setErr(""); set({ status: "pending" });
     try {
-      const { paymentUrl } = await createPayment({ data: { mode: s.mode!, stage: s.stage!, docs: items, origin: window.location.origin } });
+      const { paymentUrl } = await createPayment({ data: { mode: s.mode!, stage: s.stage!, docs: items } });
       window.location.href = paymentUrl;
     } catch (e) {
       set({ status: "failed" });

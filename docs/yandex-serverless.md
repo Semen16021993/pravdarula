@@ -1,47 +1,49 @@
-# Deploy to Yandex Serverless Containers
+# Развертывание «Право Руля» в Yandex Cloud
 
-The application is built as a standalone Nitro Node server. The container listens on `0.0.0.0:8080`.
+Проект собирается как статическая SPA. Файлы интерфейса хранятся в Object Storage и раздаются через API Gateway. Серверная часть работает в Cloud Functions и использует YDB и Cloud Postbox.
 
-## Build-time variables
+## Архитектура
 
-Pass only public Supabase settings as Docker build arguments:
+- Object Storage (`pravdarula.ru`) — статические файлы интерфейса.
+- API Gateway (`pravdarula-production`) — единая HTTPS-точка входа для SPA и API.
+- Cloud Functions (`pravdarula-api`) — авторизация, личные кабинеты, заказы, оплата и webhook.
+- Managed YDB — пользователи, одноразовые коды, сессии, анкеты, заказы и покупки.
+- Cloud Postbox (`auth.pravdarula.ru`) — одноразовые коды входа.
+- Lockbox (`pravdarula-runtime-secrets`) — `AUTH_SECRET`.
+- Lockbox (`pravdarula-yandex-pay`) — отдельный секрет для ключей Yandex Pay; сейчас он создан, но пуст.
 
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_PUBLISHABLE_KEY`
-- `VITE_SUPABASE_PROJECT_ID`
-- `SUPABASE_PROJECT_ID`
+Lovable используется как редактор исходного кода. Для работы сайта не требуется Lovable Cloud или Supabase.
 
-Example:
+## Локальная сборка
 
-```sh
-docker build \
-  --build-arg VITE_SUPABASE_URL="$VITE_SUPABASE_URL" \
-  --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="$VITE_SUPABASE_PUBLISHABLE_KEY" \
-  --build-arg VITE_SUPABASE_PROJECT_ID="$VITE_SUPABASE_PROJECT_ID" \
-  --build-arg SUPABASE_PROJECT_ID="$SUPABASE_PROJECT_ID" \
-  -t pravdarula:latest .
+```bash
+npm run build:yandex
+./yandex-api/build.sh
 ```
 
-Never pass `SUPABASE_SERVICE_ROLE_KEY` or `YANDEX_PAY_API_KEY` as build arguments. Configure them only as runtime environment variables in Yandex Cloud.
+Статические файлы собираются в `.output/public`, архив Cloud Function — в `yandex-api/pravdarula-api.zip`.
 
-## Runtime variables
+## Секреты и платежи
 
-Configure these in the Serverless Container revision:
+`AUTH_SECRET` хранится в Lockbox и передается Cloud Function как переменная окружения.
 
-- `SUPABASE_URL` — Supabase project URL.
-- `SUPABASE_PUBLISHABLE_KEY` — public Supabase publishable key.
-- `SUPABASE_SERVICE_ROLE_KEY` — server-only service-role key; keep it out of browser code and image build arguments.
-- `YANDEX_PAY_ENV` — `sandbox` for tests or `live` for real payments.
-- `YANDEX_PAY_API_KEY` — server-only Yandex Pay merchant API key.
+Для включения платежей нужно добавить в секрет `pravdarula-yandex-pay` ключи `YANDEX_PAY_API_KEY` (боевой) и/или `YANDEX_PAY_SANDBOX_API_KEY` (тестовый). Сейчас `YANDEX_PAY_ENV=sandbox`, но ключ не добавлен, поэтому создание платежей отвечает сообщением о временной недоступности оплаты. Ключ нельзя помещать в браузерный код или build arguments.
 
-Use `.env.example` as a variable-name checklist, not as a source of real credentials.
+## Деплой
 
-## Email one-time-code login
+1. Один раз скопировать `.deploy-yandex.env.example` в локальный `.deploy-yandex.env` и заполнить параметры Yandex Cloud. Файл с реальными настройками игнорируется Git.
+2. Для следующего обновления выполнить:
 
-The login screen requests an OTP through Supabase Auth (`signInWithOtp`) and verifies it with `verifyOtp`. For numeric codes to arrive by email:
+```bash
+./deploy-yandex.sh
+```
 
-1. Configure a working SMTP provider in Supabase Auth.
-2. Configure the relevant email template to render `{{ .Token }}` (not only a confirmation URL).
-3. Verify the sender domain and sender address with the SMTP provider.
+Скрипт собирает SPA и Cloud Function, загружает файлы в Object Storage, публикует новую версию Cloud Function, обновляет API Gateway и проверяет `APP_BASE_URL/api/health`.
 
-The previous development endpoint that created users and returned their OTP directly to the browser has been removed.
+## Текущее состояние домена
+
+- `https://pravdarula.ru` подключен к API Gateway через ANAME и действующий сертификат.
+- Основной домен проверен напрямую, в обход VPN: HTML, JS, CSS, шрифты и API отвечают успешно; YDB подключена.
+- Вход по email и личный кабинет имеют серверные маршруты; проверка Origin для `https://pravdarula.ru` настроена.
+- `www.pravdarula.ru` пока остается на прежнем DNS-адресе. В облаке действует квота на один подключенный домен; для подключения `www` потребуется запросить увеличение квоты Yandex Cloud.
+- Боевые платежи пока не включены: отсутствует ключ Yandex Pay.

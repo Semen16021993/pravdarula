@@ -1,0 +1,14 @@
+{
+  "name": "pravdarula-yandex-api",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@ydbjs/auth": "latest",
+    "@ydbjs/core": "latest",
+    "@ydbjs/query": "latest",
+    "jose": "^6.2.18"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

@@ -3,7 +3,18 @@ import { ArrowLeft, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+
+async function postAuth(path: string, payload: Record<string, string>) {
+  const response = await fetch(path, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "Не удалось выполнить запрос.");
+  return data;
+}
 
 export function Login() {
   const [email, setEmail] = useState("");
@@ -18,15 +29,11 @@ export function Login() {
     setError("");
     try {
       const normalizedEmail = email.trim().toLowerCase();
-      const { error: sendError } = await supabase.auth.signInWithOtp({
-        email: normalizedEmail,
-        options: { shouldCreateUser: true },
-      });
-      if (sendError) throw sendError;
+      await postAuth("/api/auth/request-code", { email: normalizedEmail });
       setEmail(normalizedEmail);
       setSent(true);
-    } catch {
-      setError("Не удалось отправить код. Проверьте адрес почты и попробуйте ещё раз.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось отправить код. Попробуйте ещё раз.");
     } finally {
       setBusy(false);
     }
@@ -37,14 +44,13 @@ export function Login() {
     setBusy(true);
     setError("");
     try {
-      const { error: verifyError } = await supabase.auth.verifyOtp({
+      await postAuth("/api/auth/verify-code", {
         email: email.trim().toLowerCase(),
-        token: code.trim(),
-        type: "email",
+        code: code.trim(),
       });
-      if (verifyError) throw verifyError;
-    } catch {
-      setError("Код неверный или устарел. Запросите новый.");
+      window.location.reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Код неверный или устарел. Запросите новый.");
     } finally {
       setBusy(false);
     }
@@ -102,7 +108,7 @@ export function Login() {
               autoComplete="one-time-code"
               required
               value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
               className="mt-1.5 bg-background text-center text-2xl tracking-[0.4em]"
             />
             {error && (
@@ -114,7 +120,7 @@ export function Login() {
               type="submit"
               size="lg"
               className="mt-5 w-full"
-              disabled={busy || code.length < 6}
+              disabled={busy || code.length !== 6}
             >
               {busy ? "Проверяем…" : "Войти"}
             </Button>

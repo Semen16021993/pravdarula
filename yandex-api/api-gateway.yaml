@@ -1,0 +1,198 @@
+openapi: "3.0.0"
+info:
+  title: "Pravdo Rulya"
+  version: "1.0.0"
+paths:
+  /:
+    get:
+      operationId: getIndex
+      responses:
+        '200':
+          description: Application entry point
+      x-yc-apigateway-integration:
+        type: object_storage
+        bucket: pravdarula.ru
+        object: index.html
+  /{file}:
+    get:
+      operationId: getRootStaticFile
+      parameters:
+        - name: file
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Static file or SPA fallback
+      x-yc-apigateway-integration:
+        type: object_storage
+        bucket: pravdarula.ru
+        object: '{file}'
+        error_object:
+          object: index.html
+          statusCode: 200
+  /assets/{file}:
+    get:
+      operationId: getAsset
+      parameters:
+        - name: file
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Frontend asset
+      x-yc-apigateway-integration:
+        type: object_storage
+        bucket: pravdarula.ru
+        object: 'assets/{file}'
+  /fonts/{file}:
+    get:
+      operationId: getFont
+      parameters:
+        - name: file
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Frontend font
+      x-yc-apigateway-integration:
+        type: object_storage
+        bucket: pravdarula.ru
+        object: 'fonts/{file}'
+  /api/health:
+    get:
+      operationId: apiHealth
+      responses:
+        '200':
+          description: API and database health
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4enekjmqshm6ri0jtjl
+        tag: "$latest"
+        service_account_id: ajeqeg0vt7chvaidi63g
+        payload_format_version: "0.1"
+  /api/auth/request-code:
+    post:
+      operationId: requestLoginCode
+      responses:
+        '200':
+          description: Login code sent
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4enekjmqshm6ri0jtjl
+        tag: "$latest"
+        service_account_id: ajeqeg0vt7chvaidi63g
+        payload_format_version: "0.1"
+  /api/auth/verify-code:
+    post:
+      operationId: verifyLoginCode
+      responses:
+        '200':
+          description: Login successful
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4enekjmqshm6ri0jtjl
+        tag: "$latest"
+        service_account_id: ajeqeg0vt7chvaidi63g
+        payload_format_version: "0.1"
+  /api/auth/me:
+    get:
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: Current user session
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4enekjmqshm6ri0jtjl
+        tag: "$latest"
+        service_account_id: ajeqeg0vt7chvaidi63g
+        payload_format_version: "0.1"
+  /api/auth/logout:
+    post:
+      operationId: logout
+      responses:
+        '200':
+          description: Session closed
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4enekjmqshm6ri0jtjl
+        tag: "$latest"
+        service_account_id: ajeqeg0vt7chvaidi63g
+        payload_format_version: "0.1"
+  /api/cabinet:
+    get:
+      operationId: getCabinet
+      responses:
+        '200':
+          description: User cabinet
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4enekjmqshm6ri0jtjl
+        tag: "$latest"
+        service_account_id: ajeqeg0vt7chvaidi63g
+        payload_format_version: "0.1"
+  /api/cabinet/form:
+    put:
+      operationId: saveCabinetForm
+      responses:
+        '200':
+          description: Form saved
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4enekjmqshm6ri0jtjl
+        tag: "$latest"
+        service_account_id: ajeqeg0vt7chvaidi63g
+        payload_format_version: "0.1"
+  /api/payments/create:
+    post:
+      operationId: createPayment
+      responses:
+        '200':
+          description: Payment created
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4enekjmqshm6ri0jtjl
+        tag: "$latest"
+        service_account_id: ajeqeg0vt7chvaidi63g
+        payload_format_version: "0.1"
+  /api/payments/check:
+    post:
+      operationId: checkPayment
+      responses:
+        '200':
+          description: Payment status
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4enekjmqshm6ri0jtjl
+        tag: "$latest"
+        service_account_id: ajeqeg0vt7chvaidi63g
+        payload_format_version: "0.1"
+  /v1/webhook:
+    post:
+      operationId: yandexPayWebhook
+      responses:
+        '200':
+          description: Yandex Pay webhook accepted
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4enekjmqshm6ri0jtjl
+        tag: "$latest"
+        service_account_id: ajeqeg0vt7chvaidi63g
+        payload_format_version: "0.1"
+  /api/public/yandex-pay-webhook:
+    post:
+      operationId: yandexPayWebhookLegacy
+      responses:
+        '200':
+          description: Webhook accepted
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4enekjmqshm6ri0jtjl
+        tag: "$latest"
+        service_account_id: ajeqeg0vt7chvaidi63g
+        payload_format_version: "0.1"
