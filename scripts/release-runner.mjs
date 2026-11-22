@@ -1,6 +1,8 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, mkdtempSync, unlinkSync, renameSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
+import { promisify } from 'node:util';
+const execFileAsync = promisify(execFile);
 import { pathToFileURL } from 'node:url';
 import { planChanges, parseGitPaths, backendDependencies, backendEndpoints, assertSourceBoundary, hash, assertProductionAssets, fileManifest } from './release-plan.mjs';
 import { normalize, verifyFunction, assertSameFunction, candidateArgs, gatewaySpec, assertGateway, gatewayTags, pinGateway, writeGateway, equal, sameDeployedGateway, comparableGateway, assertEndpoints, assertReadOnlyProbe } from './release-safety.mjs';
@@ -42,8 +44,9 @@ export function makeAdapter(env, directory) {
         if (page.is_truncated && !token) throw Error('Incomplete bucket listing');
       } while (token);
     },
-    metadata: key => {
-      const head = cloud(['storage', 's3api', 'head-object', '--bucket', env.YC_BUCKET, '--key', key, '--format', 'json']);
+    metadata: async key => {
+      const { stdout } = await execFileAsync('yc', ['storage', 's3api', 'head-object', '--bucket', env.YC_BUCKET, '--key', key, '--format', 'json', '--retry', '1', '--no-cli-auto-prompt'], { timeout: 180000 });
+      const head = JSON.parse(stdout);
       const field = name => head[name] ?? head[name[0].toLowerCase() + name.slice(1)] ?? head[name.replace(/[A-Z]/g, (c, i) => (i ? '_' : '') + c.toLowerCase())];
       const type = field('ContentType');
       if (!type) throw Error(`Missing live Content-Type for backup object: ${key}`);
@@ -190,7 +193,13 @@ export async function runRelease(env = process.env, testing = {}) {
     adapter.backup(backup);
     const backupHashes = fileManifest(backup);
     if (!backupHashes['index.html']) throw Error('Backup has no production index.html; stopped before cloud writes');
-    const staticMetadata = Object.fromEntries(Object.keys(backupHashes).map(key => [key, adapter.metadata(key)]));
+    const staticMetadata = {};
+    const backupKeys = Object.keys(backupHashes);
+    for (let offset = 0; offset < backupKeys.length; offset += 4) {
+      await Promise.all(backupKeys.slice(offset, offset + 4).map(async key => {
+        staticMetadata[key] = await adapter.metadata(key);
+      }));
+    }
     await adapter.verifyStatic(backupHashes);
     const previousTag = `release-${before.id}`;
     const pending = { directory, commit, previousVersion: before.id, previousTag, functionId: env.YC_FUNCTION_ID, gatewayId: env.YC_GATEWAY_ID, env: { YC_BUCKET: env.YC_BUCKET, YC_FUNCTION_ID: env.YC_FUNCTION_ID, YC_GATEWAY_ID: env.YC_GATEWAY_ID, YC_RUNTIME_SA_ID: env.YC_RUNTIME_SA_ID, YC_GATEWAY_SA_ID: env.YC_GATEWAY_SA_ID, APP_BASE_URL: env.APP_BASE_URL }, phase: 'prepared', migrationStarted: false, backupHashes, staticMetadata, snapshotHashes: Object.fromEntries(['function-before.json', 'version-before.json', 'gateway-before.json', 'gateway-desired.json', 'current-before.json'].map(name => [join(directory, name), hash(readFileSync(join(directory, name)))])) };
