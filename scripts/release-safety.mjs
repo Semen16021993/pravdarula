@@ -46,12 +46,29 @@ export function assertSameFunction(before, after) {
   if (!equal(a, b)) throw Error('Candidate Function configuration differs from baseline; candidate must not be activated');
 }
 export function candidateArgs(before, archive, description) {
-  // Clone every platform setting, not a guessed subset of runtime defaults.
-  // Candidate config is read back and compared BEFORE Gateway activation.
   const v = normalize(before);
-  functionConfig(v);
-  return ['serverless', 'function', 'version', 'create', '--function-id', v.function_id,
-    '--source-version-id', v.id, '--source-path', archive, '--description', description, '--format', 'json'];
+  const config = functionConfig(v);
+  const supported = ['runtime', 'entrypoint', 'resources', 'execution_timeout', 'service_account_id', 'environment', 'secrets', 'concurrency', 'log_options', 'metadata_options'];
+  for (const key of Object.keys(config)) if (!supported.includes(key)) throw Error('Unsupported Function creation setting: ' + key);
+  if (Object.keys(v.resources).some(k => k !== 'memory') || !/^\d+$/.test(String(v.resources.memory))) throw Error('Unsupported function resources');
+  const args = ['serverless', 'function', 'version', 'create', '--function-id', v.function_id,
+    '--source-path', archive, '--runtime', v.runtime, '--entrypoint', v.entrypoint,
+    '--memory', String(v.resources.memory) + 'B', '--execution-timeout', v.execution_timeout,
+    '--service-account-id', v.service_account_id, '--description', description, '--format', 'json'];
+  if (v.concurrency) args.push('--concurrency', String(v.concurrency));
+  for (const [name, value] of Object.entries(v.environment || {})) {
+    if (String(value).includes(',')) throw Error('Unsupported comma in Function environment setting: ' + name);
+    args.push('--environment', name + '=' + value);
+  }
+  for (const secret of config.secrets) args.push('--secret', ['id=' + secret.id, 'version-id=' + secret.version_id, 'key=' + secret.key, 'environment-variable=' + secret.environment_variable].join(','));
+  for (const [key, value] of Object.entries(v.log_options || {})) {
+    const flag = { folder_id: '--log-folder-id', log_group_id: '--log-group-id', min_level: '--min-log-level' }[key];
+    if (key === 'disabled') { if (value) args.push('--no-logging'); }
+    else if (flag) args.push(flag, String(value));
+    else throw Error('Unsupported Function logging setting: ' + key);
+  }
+  if (v.metadata_options) args.push('--metadata-options', Object.entries(v.metadata_options).map(([key,value]) => key.replaceAll('_', '-') + '=' + String(value).toLowerCase()).join(','));
+  return args;
 }
 export function gatewaySpec(raw) {
   if (typeof raw === 'string') return parse(raw);
