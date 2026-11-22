@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { parse } from 'yaml';
-import { recoverRelease, savePending } from './release-recovery.mjs';
+import { recoverRelease, savePending, contentType } from './release-recovery.mjs';
 import { hash, fileManifest } from './release-plan.mjs';
 import { pinGateway } from './release-safety.mjs';
 function fixture() {
@@ -60,4 +60,10 @@ test('recovery restores the old manifest even if a crash followed writing the ne
   writeFileSync(file, JSON.stringify(old)); f.pending.snapshotHashes[file] = hash(readFileSync(file));
   writeFileSync(f.state + '/current.json', JSON.stringify({ commit: 'new', functionVersion: 'v2' })); savePending(f.state, f.pending);
   try { await recoverRelease(f.state, f.adapter); assert.deepEqual(JSON.parse(readFileSync(f.state + '/current.json', 'utf8')), old); } finally { f.cleanup(); }
+});
+
+test('Nitro Cloudflare _headers artifact is accepted as inert plain text for Yandex storage', () => {
+  assert.equal(contentType('_headers'), 'text/plain; charset=utf-8');
+  assert.equal(contentType('assets/app.js'), 'application/javascript');
+  assert.throws(() => contentType('assets/unknown.zzz'), /Unknown static MIME type/);
 });

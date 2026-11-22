@@ -4,6 +4,9 @@ import { hash, fileManifest } from './release-plan.mjs';
 import { assertSameFunction, assertGateway, gatewaySpec, gatewayTags, pinGateway, writeGateway, equal, comparableGateway } from './release-safety.mjs';
 
 export const contentType = path => {
+  // Nitro emits this Cloudflare-specific header manifest without an extension.
+  // Yandex Object Storage does not interpret it; keep it as inert plain text.
+  if (path === '_headers') return 'text/plain; charset=utf-8';
   const ext = path.split('.').pop().toLowerCase();
   const types = { html: 'text/html; charset=utf-8', js: 'application/javascript', css: 'text/css', json: 'application/json', map: 'application/json', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', ico: 'image/x-icon', svg: 'image/svg+xml', webp: 'image/webp', avif: 'image/avif', woff: 'font/woff', woff2: 'font/woff2', ttf: 'font/ttf', txt: 'text/plain; charset=utf-8', xml: 'application/xml', pdf: 'application/pdf', mp4: 'video/mp4', webm: 'video/webm' };
   if (!types[ext]) throw Error(`Unknown static MIME type: ${path}; review upload metadata before writing`);
