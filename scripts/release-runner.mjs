@@ -45,7 +45,7 @@ export function makeAdapter(env, directory) {
       } while (token);
     },
     metadata: async key => {
-      const { stdout } = await execFileAsync('yc', ['storage', 's3api', 'head-object', '--bucket', env.YC_BUCKET, '--key', key, '--format', 'json', '--retry', '1', '--no-cli-auto-prompt'], { timeout: 180000 });
+      const { stdout } = await execFileAsync('yc', ['storage', 's3api', 'head-object', '--bucket', env.YC_BUCKET, '--key', key, '--format', 'json', '--retry', '0', '--no-cli-auto-prompt'], { timeout: 180000 });
       const head = JSON.parse(stdout);
       const field = name => head[name] ?? head[name[0].toLowerCase() + name.slice(1)] ?? head[name.replace(/[A-Z]/g, (c, i) => (i ? '_' : '') + c.toLowerCase())];
       const type = field('ContentType');
