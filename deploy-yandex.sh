@@ -49,6 +49,7 @@ echo '== Build Cloud Function =='
 echo '== Publish Cloud Function version =='
 ENVIRONMENT="YDB_CONNECTION_STRING=${YDB_CONNECTION_STRING},POSTBOX_FROM_EMAIL=${POSTBOX_FROM_EMAIL},YANDEX_PAY_ENV=${YANDEX_PAY_ENV},APP_BASE_URL=${APP_BASE_URL}"
 if [[ -n "${APP_ORIGINS:-}" ]]; then ENVIRONMENT="${ENVIRONMENT},APP_ORIGINS=${APP_ORIGINS}"; fi
+if [[ -n "${APP_PREVIEW_ORIGIN:-}" ]]; then ENVIRONMENT="${ENVIRONMENT},APP_PREVIEW_ORIGIN=${APP_PREVIEW_ORIGIN}"; fi
 if [[ -n "${YANDEX_PAY_MERCHANT_ID:-}" ]]; then ENVIRONMENT="${ENVIRONMENT},YANDEX_PAY_MERCHANT_ID=${YANDEX_PAY_MERCHANT_ID}"; fi
 ARGS=(yc serverless function version create --function-id "$YC_FUNCTION_ID" --runtime nodejs22 --entrypoint index.handler --memory 256m --execution-timeout 30s --service-account-id "$YC_RUNTIME_SA_ID" --source-path yandex-api/pravdarula-api.zip --environment "$ENVIRONMENT" --secret "id=${YC_AUTH_SECRET_ID},key=AUTH_SECRET,environment-variable=AUTH_SECRET" --description "Pravdo Rulya deploy $(date -u +%Y-%m-%dT%H:%M:%SZ)")
 if [[ -n "${YC_PAY_SECRET_ID:-}" ]]; then

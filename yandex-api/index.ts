@@ -153,6 +153,8 @@ function assertAllowedOrigin(event: GatewayEvent): void {
   const configured = process.env.APP_ORIGINS
     ? process.env.APP_ORIGINS.split(",").map((item) => item.trim()).filter(Boolean)
     : [base];
+  const previewOrigin = process.env.APP_PREVIEW_ORIGIN?.trim();
+  if (previewOrigin) configured.push(previewOrigin);
   if (base === "https://pravdarula.ru") configured.push("https://www.pravdarula.ru");
   if (!configured.includes(origin)) throw httpError(403, "Запрос отклонён.");
 }
