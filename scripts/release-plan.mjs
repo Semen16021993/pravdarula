@@ -9,12 +9,14 @@ export function planChanges(paths, hasBaseline, backendSources = []) {
     if (backendSources.includes(p)) plan.backend = true;
     if (/^yandex-api\/migrations\//.test(p)) plan.migrations = true;
     else if (p === 'yandex-api/api-gateway.yaml') plan.gateway = true;
-    else if (/^yandex-api\//.test(p)) plan.backend = true;
+    else if (/^yandex-api\//.test(p)) { plan.backend = true; plan.gateway = true; }
+    else if (/^src\/(routes\/api\/|.*\.functions\.|server\.|start\.)/.test(p)) { plan.unknown.push(p); plan.frontend = plan.backend = plan.gateway = true; }
     else if (/^(src\/|public\/|vite)/.test(p)) {
       plan.frontend = true;
       if (/^src\/lib\/(catalog|.*\.shared)\./.test(p)) plan.backend = true;
     } else if (/^(package|bun\.lock|tsconfig)/.test(p)) plan.frontend = plan.backend = true;
-    else if (/^(docs\/|\.lovable\/|.*\.md$|src\/.*\.test\.|scripts\/|\.gitignore|deploy-yandex\.sh|\.deploy-yandex\.env\.example)/.test(p)) { /* tooling/docs */ }
+    else if (/^(docs\/|\.lovable\/|.*\.md$|\.gitignore$|deploy-yandex\.sh$|\.deploy-yandex\.env\.example$)/.test(p)) { /* reviewed docs/bootstrap */ }
+    else if (/^scripts\/(release-(plan|cli|safety|runner|recovery)(\.test)?\.mjs|verify-(function-config|production-demo\.test)\.mjs)$/.test(p)) { /* reviewed release tooling */ }
     else { plan.unknown.push(p); plan.frontend = plan.backend = plan.gateway = true; }
   }
   return plan;
@@ -38,6 +40,19 @@ export function backendDependencies(entry = 'yandex-api/index.ts') {
   }
   walk(entry);
   return [...found].sort();
+}
+
+/** The API's current literal dispatch must be covered by Gateway, including method aliases. */
+export function backendEndpoints(source = readFileSync('yandex-api/index.ts', 'utf8')) {
+  const endpoints = new Set();
+  for (const line of source.split('\n').filter(line => /^\s*if\s*\(/.test(line) && /\bpath\b/.test(line))) {
+    const methods = [...line.matchAll(/method\s*===\s*["']([A-Z]+)["']/g)].map(m => m[1]);
+    const paths = [...line.matchAll(/path\s*===\s*["']([^"']+)["']/g)].map(m => m[1]);
+    if (!methods.length || !paths.length) throw Error('Nonliteral API dispatcher requires reviewed endpoint inventory before release');
+    for (const method of methods) for (const path of paths) endpoints.add(`${method} ${path}`);
+  }
+  if (!endpoints.size) throw Error('No verifiable API endpoints found');
+  return [...endpoints].sort();
 }
 
 export function fileManifest(root) {

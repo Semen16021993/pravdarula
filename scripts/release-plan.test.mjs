@@ -29,3 +29,6 @@ test('transitive backend dependencies outside API select backend updates', () =>
   assert.ok(backendDependencies().includes('src/lib/catalog.ts'));
   assert.equal(planChanges(['src/lib/new-rule.ts'], true, ['src/lib/new-rule.ts']).backend, true);
 });
+test('new Yandex endpoint always requests Gateway review', () => assert.equal(planChanges(['yandex-api/index.ts'], true).gateway, true));
+test('new server route cannot silently become a static-only release', () => assert.deepEqual(planChanges(['src/routes/api/public/new.ts'], true).unknown, ['src/routes/api/public/new.ts']));
+test('unknown release tooling is not implicitly trusted', () => assert.deepEqual(planChanges(['scripts/new-infrastructure.mjs'], true).unknown, ['scripts/new-infrastructure.mjs']));

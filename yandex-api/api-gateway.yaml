@@ -137,6 +137,17 @@ paths:
         service_account_id: ajeqeg0vt7chvaidi63g
         payload_format_version: "0.1"
   /api/cabinet/form:
+    post:
+      operationId: saveCabinetFormPost
+      responses:
+        '200':
+          description: Form saved (existing API method alias)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        function_id: d4enekjmqshm6ri0jtjl
+        tag: "$latest"
+        service_account_id: ajeqeg0vt7chvaidi63g
+        payload_format_version: "0.1"
     put:
       operationId: saveCabinetForm
       responses:

@@ -1,5 +1,13 @@
 {
-  "description": "Existing Yandex schema: validate required columns read-only before explicitly adopting migration journal.",
+  "description": "Source-known auth types and table keys; remaining exact types/indexes/options MUST be inspected via DescribeTable and separately approved as the live baseline, never guessed.",
+  "primaryKeys": {
+    "users": ["email"], "auth_codes": ["email"], "auth_sessions": ["token_hash"], "cabinets": ["user_id"], "orders": ["id"]
+  },
+  "typeConstraints": {
+    "users": { "email": "Utf8", "user_id": "Utf8", "created_at": "Timestamp" },
+    "auth_codes": { "email": "Utf8", "code_hash": "Utf8", "expires_at": "Timestamp", "attempts": "Uint32", "sent_at": "Timestamp" },
+    "auth_sessions": { "token_hash": "Utf8", "user_id": "Utf8", "email": "Utf8", "expires_at": "Timestamp", "created_at": "Timestamp" }
+  },
   "tables": {
     "users": ["email", "user_id", "created_at"],
     "auth_codes": ["email", "code_hash", "expires_at", "attempts", "sent_at"],

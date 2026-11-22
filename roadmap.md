@@ -1,4 +1,8 @@
 # Unified Yandex release
+- [ ] Harden full Function configuration/secret preservation and pinned API activation.
+- [ ] Add fail-closed pending release handling and locally tested static/Gateway recovery.
+- [ ] Verify YDB schema types/keys/indexes, explicit migration approval and partial-DDL recovery.
+- [ ] Block unknown dependencies/routes; run local regression tests and deliver a second audit/full diff.
 - [x] Isolate Preview at compile time and remove demo prefilling from real forms.
 - [x] Add dependency-aware release planner, artifact verification and universal deployment with confirmation and recovery manifests.
 - [x] Add ordered YDB migration tooling with checksums, locking and baseline approval; no live schema changes.

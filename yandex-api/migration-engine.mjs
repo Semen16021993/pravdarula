@@ -1,6 +1,31 @@
 import { createHash } from 'node:crypto';
 
 export const digest = (value) => createHash('sha256').update(value).digest('hex');
+export function sortMigrations(migrations) {
+  const sorted = [...migrations].sort((a, b) => {
+    const x = BigInt(a.id.split('_')[0]), y = BigInt(b.id.split('_')[0]);
+    return x < y ? -1 : x > y ? 1 : a.id.localeCompare(b.id);
+  });
+  const seen = new Set();
+  for (const m of sorted) {
+    const number = BigInt(m.id.split('_')[0]).toString();
+    if (seen.has(number)) throw Error('Duplicate migration sequence number');
+    seen.add(number);
+  }
+  return sorted;
+}
+export function preflightMigrations(journal, migrations, resume = null) {
+  for (const old of journal) {
+    const current = migrations.find(m => m.id === old.id);
+    if (!current || current.checksum !== old.checksum) throw Error(`Applied migration changed or disappeared: ${old.id}`);
+    if (old.status !== 'applied' && (resume !== old.id || current.idempotent !== true)) throw Error(`Unfinished migration ${old.id}; inspect partial DDL before explicit idempotent resume`);
+  }
+  for (const m of sortMigrations(migrations)) {
+    if (journal.some(old => old.id === m.id && old.status === 'applied')) continue;
+    if (m.safety === 'destructive') throw Error(`Separate destructive approval and rehearsed external recovery required: ${m.id}; automatic destructive DDL is blocked`);
+    if (m.idempotent !== true || m.statements.length !== 1 || !m.expectedAfter || !Object.keys(m.expectedAfter).length || typeof m.recovery !== 'string' || !m.recovery.trim()) throw Error(`Migration ${m.id} requires one idempotent statement, expectedAfter schema and concrete recovery instructions`);
+  }
+}
 export function validateMigration(m) {
   if (!/^\d{3,}_[a-z0-9_-]+$/.test(m.id) || !Array.isArray(m.statements) || !m.statements.length || m.statements.some((s) => typeof s !== 'string' || !s.trim())) throw new Error('Invalid migration');
   if (!['additive', 'destructive'].includes(m.safety)) throw new Error('Migration needs explicit safety classification');
@@ -14,17 +39,19 @@ export async function applyMigrations(adapter, migrations, { approveDestructive 
   await adapter.lock();
   try {
     const journal = await adapter.journal();
+    preflightMigrations(journal, migrations, resume);
     for (const old of journal) {
       const current = migrations.find((m) => m.id === old.id);
       if (!current || current.checksum !== old.checksum) throw new Error(`Applied migration changed or disappeared: ${old.id}`);
       if (old.status !== 'applied' && (resume !== old.id || current.idempotent !== true)) throw new Error(`Unfinished migration ${old.id}; inspect partial DDL before explicit idempotent resume`);
     }
-    for (const m of migrations) {
+    for (const m of sortMigrations(migrations)) {
       if (journal.some((old) => old.id === m.id && old.status === 'applied')) continue;
       if (m.safety === 'destructive' && !approveDestructive) throw new Error(`Separate destructive approval required: ${m.id}`);
       await adapter.record(m, 'running');
       try {
         for (const statement of m.statements) await adapter.execute(statement);
+        if (adapter.verify) await adapter.verify(m);
         await adapter.record(m, 'applied');
       } catch (error) {
         await adapter.record(m, 'failed');
