@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { canonicalSchema, assertBaselineContract, assertAcceptedSchema } from './schema-check.mjs';
+import { canonicalSchema, assertBaselineContract, assertAcceptedSchema, isMissingYdbTableError } from './schema-check.mjs';
 const raw = { columns: [{ name: 'email', type: { typeId: 'UTF8' } }, { name: 'created_at', type: { typeId: 'TIMESTAMP' } }], primaryKey: ['email'], indexes: [{ name: 'created', indexColumns: ['created_at'], type: 'GLOBAL_SYNC' }] };
 const schema = canonicalSchema(raw);
 const baseline = { tables: { users: ['email', 'created_at'] }, primaryKeys: { users: ['email'] }, typeConstraints: { users: { email: 'Utf8', created_at: 'Timestamp' } } };
@@ -24,4 +24,10 @@ test('unexpected table settings remain part of drift comparison', () => assert.t
 test('YDB proto-json-base64 type_id fields are accepted directly', () => {
   const described = canonicalSchema({ columns: [{ name: 'email', type: { type_id: 'UTF8' } }], primary_key: ['email'] });
   assert.equal(described.columns[0].type, 'Utf8');
+});
+
+test('nested YDB issue details identify a missing migration journal table', () => {
+  const missing = { message: 'SCHEME_ERROR, Issues: ERROR(1030): Type annotation', issues: [{ issues: [{ message: "Cannot find table 'db.deployment_migrations' because it does not exist or you do not have access permissions." }] }] };
+  assert.equal(isMissingYdbTableError(missing), true);
+  assert.equal(isMissingYdbTableError({ message: 'Unavailable', issues: [{ message: 'network timeout' }] }), false);
 });

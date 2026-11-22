@@ -35,6 +35,11 @@ export function assertBaselineContract(schema, baseline) {
 export function assertAcceptedSchema(actual, accepted) {
   if (!equal(actual, accepted)) throw Error('YDB schema drift: columns/types/PK/indexes/table options changed; inspect read-only snapshot before release');
 }
+export function isMissingYdbTableError(error) {
+  // YDB nests the useful 'table does not exist' diagnostic inside issues; String(error) alone loses it.
+  const detail = [String(error?.message || error), JSON.stringify(error?.issues || [])].join(' ');
+  return /path.*(not exist|does not exist)|table.*(not found|not exist|does not exist)/i.test(detail);
+}
 export function readLiveSchema(connection, tables) {
   const url = new URL(connection);
   const database = url.searchParams.get('database');

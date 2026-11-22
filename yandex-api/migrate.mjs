@@ -6,7 +6,7 @@ import { Driver } from '@ydbjs/core';
 import { query, unsafe } from '@ydbjs/query';
 import { AccessTokenCredentialsProvider } from '@ydbjs/auth/access-token';
 import { applyMigrations, validateMigration, digest, sortMigrations, preflightMigrations } from './migration-engine.mjs';
-import { inspectSchema, readLiveSchema, assertAcceptedSchema } from './schema-check.mjs';
+import { inspectSchema, readLiveSchema, assertAcceptedSchema, isMissingYdbTableError } from './schema-check.mjs';
 
 const directory = join(dirname(fileURLToPath(import.meta.url)), 'migrations');
 const migrations = sortMigrations(readdirSync(directory).filter((p) => /^\d{3,}_[a-z0-9_-]+\.json$/.test(p)).sort().map((p) => {
@@ -42,7 +42,7 @@ try {
   let hasJournal = true;
   try { await sql`SELECT id FROM deployment_migrations LIMIT 0`; }
   catch (error) {
-    if (!/path.*(not exist|does not exist)|table.*(not found|not exist)/i.test(String(error))) throw error;
+    if (!isMissingYdbTableError(error)) throw error;
     hasJournal = false;
   }
   if (!hasJournal && mode === 'check') {
