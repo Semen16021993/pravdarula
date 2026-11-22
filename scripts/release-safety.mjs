@@ -56,10 +56,11 @@ export function candidateArgs(before, archive, description) {
     '--memory', String(v.resources.memory) + 'B', '--execution-timeout', v.execution_timeout,
     '--service-account-id', v.service_account_id, '--description', description, '--format', 'json'];
   if (v.concurrency) args.push('--concurrency', String(v.concurrency));
-  for (const [name, value] of Object.entries(v.environment || {})) {
+  const variables = Object.entries(v.environment || {}).map(([name, value]) => {
     if (String(value).includes(',')) throw Error('Unsupported comma in Function environment setting: ' + name);
-    args.push('--environment', name + '=' + value);
-  }
+    return name + '=' + value;
+  });
+  if (variables.length) args.push('--environment', variables.join(','));
   for (const secret of config.secrets) args.push('--secret', ['id=' + secret.id, 'version-id=' + secret.version_id, 'key=' + secret.key, 'environment-variable=' + secret.environment_variable].join(','));
   for (const [key, value] of Object.entries(v.log_options || {})) {
     const flag = { folder_id: '--log-folder-id', log_group_id: '--log-group-id', min_level: '--min-log-level' }[key];

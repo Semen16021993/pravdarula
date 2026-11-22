@@ -11,7 +11,7 @@ test('clones full live version instead of hardcoded limits/environment/secret ve
   const args = candidateArgs(version, 'api.zip', 'release');
   assert.equal(args[args.indexOf('--runtime') + 1], version.runtime);
   assert.equal(args[args.indexOf('--memory') + 1], '268435456B');
-  assert.ok(args.includes('EXTRA=preserved'));
+  assert.ok(args[args.indexOf('--environment') + 1].split(',').includes('EXTRA=preserved'));
   assert.ok(args.includes('id=auth,version-id=a1,key=AUTH_SECRET,environment-variable=AUTH_SECRET'));
   assert.ok(!args.includes('--source-version-id'));
   assertSameFunction(version, { ...version, id: 'v2', tags: ['$latest'] });
