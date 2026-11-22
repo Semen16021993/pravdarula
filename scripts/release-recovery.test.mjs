@@ -40,9 +40,9 @@ test('altered backup fails before any cloud write', async () => {
   const f = fixture(); writeFileSync(f.pending.directory + '/backup/index.html', 'corrupt');
   try { await assert.rejects(recoverRelease(f.state, f.adapter), /checksum/); assert.equal(f.writes.length, 0); } finally { f.cleanup(); }
 });
-test('possible YDB changes prevent unsafe automatic code rollback', async () => {
+test('rollback after an additive YDB migration restores code and intentionally retains additive schema', async () => {
   const f = fixture(); savePending(f.state, { ...f.pending, migrationStarted: true });
-  try { await assert.rejects(recoverRelease(f.state, f.adapter), /No automatic database rollback/); assert.equal(f.writes.length, 0); assert.equal(existsSync(f.state + '/pending.json'), true); } finally { f.cleanup(); }
+  try { await recoverRelease(f.state, f.adapter); assert.equal(existsSync(f.state + '/pending.json'), false); assert.ok(f.writes.includes('gateway-old')); assert.ok(f.writes.includes('health-and-auth-verified')); } finally { f.cleanup(); }
 });
 test('failed verification retains pending even after restoration writes', async () => {
   const f = fixture(); f.adapter.verifyPublic = async () => { throw Error('auth check failed'); };

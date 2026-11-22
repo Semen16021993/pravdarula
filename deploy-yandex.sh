@@ -5,15 +5,9 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 # Make locally installed tools available regardless of how Terminal was opened.
 export PATH="$HOME/.bun/bin:$HOME/yandex-cloud/bin:$HOME/ydb/bin:$PATH"
-for tool in git node npm bun yc ydb curl zip; do
+for tool in node yc curl zip; do
   command -v "$tool" >/dev/null || { echo "$tool required" >&2; exit 1; }
 done
-[[ "$(git branch --show-current)" == main ]] || { echo 'Deploy from main'; exit 1; }
-[[ -z "$(git status --porcelain)" ]] || { echo 'Commit local changes first'; exit 1; }
-node -e 'if (Number(process.versions.node.split(".")[0]) < 22) throw Error("Node.js 22+ required")'
-# Local source synchronization only; cloud writes happen in the checked runner AFTER approvals.
-git fetch origin
-git pull --ff-only origin main
 CONFIG="${DEPLOY_CONFIG:-.deploy-yandex.env}"
 [[ -f "$CONFIG" ]] || { echo "Missing $CONFIG"; exit 1; }
 set -a
@@ -22,6 +16,20 @@ source "$CONFIG"
 set +a
 : "${YC_BUCKET:=pravdarula.ru}" "${APP_BASE_URL:=https://pravdarula.ru}"
 export YC_BUCKET APP_BASE_URL
+if [[ "${1:-}" == "--rollback" ]]; then
+  # Rollback uses the saved, checksummed previous release; it does not need a clean Git tree or network pull.
+  node scripts/release-runner.mjs --rollback
+  exit 0
+fi
+for tool in git npm bun ydb; do
+  command -v "$tool" >/dev/null || { echo "$tool required" >&2; exit 1; }
+done
+node -e 'if (Number(process.versions.node.split(".")[0]) < 22) throw Error("Node.js 22+ required")'
+[[ "$(git branch --show-current)" == main ]] || { echo 'Deploy from main'; exit 1; }
+[[ -z "$(git status --porcelain)" ]] || { echo 'Commit local changes first'; exit 1; }
+# Local source synchronization only; cloud writes happen in the checked runner.
+git fetch origin
+git pull --ff-only origin main
 # Deterministic dependencies; these steps never write to production.
 if [[ -f package-lock.json ]]; then npm ci; else bun install --frozen-lockfile; fi
 npm ci --prefix yandex-api

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { parse } from 'yaml';
-import { runRelease } from './release-runner.mjs';
+import { runRelease, runRollback } from './release-runner.mjs';
 import { hash, fileManifest } from './release-plan.mjs';
 import { comparableGateway, functionConfig } from './release-safety.mjs';
 
@@ -109,6 +109,18 @@ for (const failure of ['candidate-create', 'candidate-config', 'probe:/api/healt
 test('release does not require compatibility report files or interactive approvals', async () => {
   const f = setup(); try { await runRelease(f.env, f.options); assert.equal(existsSync(f.state + '/pending.json'), false); assert.equal(JSON.parse(readFileSync(f.state + '/current.json', 'utf8')).functionVersion, 'v2'); } finally { f.cleanup(); }
 });
+test('manual rollback restores the previous successful UI, API and Gateway from the saved release snapshot', async () => {
+  const f = setup(); try {
+    await runRelease(f.env, f.options);
+    assert.equal(JSON.parse(readFileSync(f.state + '/current.json', 'utf8')).functionVersion, 'v2');
+    await runRollback(f.env, f.options);
+    assert.equal(existsSync(f.state + '/current.json'), false, 'first release rollback restores the pre-run state with no prior manifest');
+    assert.equal(existsSync(f.state + '/pending.json'), false);
+    assert.equal(f.storage['index.html'].toString(), 'old entry');
+    assert.equal(f.storage['assets/old.js'].toString(), 'old script');
+  } finally { f.cleanup(); }
+});
+
 test('interface changes with a stable baseline do not write Function or Gateway', async () => {
   const f = setup({ baseline: true }); try {
     await runRelease(f.env, f.options);

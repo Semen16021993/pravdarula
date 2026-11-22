@@ -218,6 +218,8 @@ export async function runRelease(env = process.env, testing = {}) {
     if (adapter.cloud(['serverless', 'function', 'version', 'get-by-tag', '--function-id', env.YC_FUNCTION_ID, '--tag', newTag, '--format', 'json']).id !== active.id) throw Error('Active version mismatch');
     await adapter.verifyStatic(assets); await adapter.verifyPublic();
     phase('verified');
+    // Keep the exact verified pre-release snapshot so a visually bad release can be rolled back manually later.
+    writeFileSync(join(directory, 'completed-pending.json'), JSON.stringify(pending, null, 2));
     const manifest = { commit, origin: env.APP_BASE_URL, bucket: env.YC_BUCKET, assets, backendHash, backendSources: dependencies, functionVersion: active.id, functionTag: newTag, functionConfigHash: hash(JSON.stringify(cfg)), gatewayHash: hash(JSON.stringify(comparableGateway(activated))), completedAt: new Date().toISOString(), directory };
     save('completed.json', manifest);
     writeFileSync(join(state, 'next.json'), JSON.stringify(manifest, null, 2)); renameSync(join(state, 'next.json'), join(state, 'current.json'));
@@ -249,6 +251,37 @@ export async function runRelease(env = process.env, testing = {}) {
     if (!cleanExit) console.error(`Release NOT completed. Inspect ${state}; next deployment is blocked if pending.json exists. YDB is never automatically rolled back.`);
   }
 }
+
+export async function runRollback(env = process.env, testing = {}) {
+  for (const key of ['YC_BUCKET', 'YC_FUNCTION_ID', 'YC_GATEWAY_ID', 'YC_RUNTIME_SA_ID', 'YC_GATEWAY_SA_ID', 'APP_BASE_URL']) if (!env[key]) throw Error(`Missing ${key}`);
+  if (env.APP_BASE_URL !== 'https://pravdarula.ru') throw Error('Unexpected production target; rollback blocked');
+  const target = hash(`${env.APP_BASE_URL}/${env.YC_BUCKET}`).slice(0, 16);
+  const state = join(env.XDG_CACHE_HOME || join(env.HOME, '.cache'), 'pravdarula-releases', target);
+  mkdirSync(state, { recursive: true, mode: 0o700 });
+  const lock = join(state, 'lock');
+  try { mkdirSync(lock); } catch (error) { if (error.code === 'EEXIST') throw Error(`Release lock exists: ${lock}; do not start another operation until it is resolved`); throw error; }
+  try {
+    const pendingFile = join(state, 'pending.json');
+    if (existsSync(pendingFile)) throw Error('An unfinished release already exists. Run the normal deploy command to recover it before requesting another rollback.');
+    const currentFile = join(state, 'current.json');
+    if (!existsSync(currentFile)) throw Error('No successful release manifest exists yet; there is no previous deployed version to restore.');
+    const current = JSON.parse(readFileSync(currentFile, 'utf8'));
+    const releaseDirectory = current.directory;
+    const rollbackFile = join(releaseDirectory, 'completed-pending.json');
+    if (!existsSync(rollbackFile)) throw Error('Rollback snapshot for the current release is missing; refusing to guess a previous version.');
+    const pending = JSON.parse(readFileSync(rollbackFile, 'utf8'));
+    if (pending.commit !== current.commit || pending.candidateVersion !== current.functionVersion) throw Error('Rollback snapshot does not match the active release manifest.');
+    writeFileSync(pendingFile, JSON.stringify({ ...pending, phase: 'manual-rollback' }, null, 2));
+    const adapterFactory = testing.makeAdapter || makeAdapter;
+    const adapter = adapterFactory(pending.env, pending.directory);
+    await recoverRelease(state, adapter);
+    console.log(`Rollback complete: restored the release preceding ${current.commit}. Previous UI, API and Gateway were verified.`);
+  } finally {
+    try { execFileSync('rmdir', [lock]); } catch { /* preserve lock if unexpected contents remain */ }
+  }
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  runRelease().catch(error => { console.error(error.message); process.exitCode = 1; });
+  const task = process.argv[2] === '--rollback' ? runRollback() : runRelease();
+  task.catch(error => { console.error(error.message); process.exitCode = 1; });
 }

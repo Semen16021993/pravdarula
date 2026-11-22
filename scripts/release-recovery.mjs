@@ -18,7 +18,7 @@ export async function recoverRelease(state, adapter) {
   const file = join(state, 'pending.json');
   const pending = JSON.parse(readFileSync(file, 'utf8'));
   verifyBackup(pending);
-  if (pending.migrationStarted) throw Error(`YDB may have changed. No automatic database rollback. Inspect ${pending.directory}/migrations-check.json and the YDB journal/DDL; restore schema/data from an approved YDB backup or prove old-code compatibility before operator-led recovery. Do not remove pending.json or rerun migrations.`);
+  if (pending.migrationStarted) console.warn('YDB migration activity was recorded. Restoring the previous code does not reverse YDB DDL; only additive migrations are accepted, so added columns/tables are intentionally retained.');
   const before = JSON.parse(readFileSync(join(pending.directory, 'version-before.json'), 'utf8'));
   const version = adapter.cloud(['serverless', 'function', 'version', 'get', pending.previousVersion, '--format', 'json']);
   assertSameFunction(before, version);
