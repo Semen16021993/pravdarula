@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { parse } from 'yaml';
 import { runRelease } from './release-runner.mjs';
@@ -20,7 +20,7 @@ function setup({ fail, baseline = false, noEvidence = false } = {}) {
   mkdirSync(state, { recursive: true });
   const storage = { 'index.html': Buffer.from('old entry'), 'assets/old.js': Buffer.from('old script') };
   let live = structuredClone(spec), active = structuredClone(version), alreadyFailed = false, activeChanged = false;
-  const tags = { '$latest': version, 'release-v1': version }; const commands = [], approvals = [];
+  const tags = { '$latest': version, 'release-v1': version }; const commands = [], approvals = []; let tokenFileSeen = null;
   const event = name => { commands.push(name); if (name === fail && !alreadyFailed) { alreadyFailed = true; throw Error('Simulated failure: ' + name); } };
   if (baseline) writeFileSync(state + '/current.json', JSON.stringify({ commit: 'b'.repeat(40), origin: env.APP_BASE_URL, bucket: 'bucket', functionVersion: 'v1', functionTag: 'release-v1', functionConfigHash: hash(JSON.stringify(functionConfig(version))), gatewayHash: hash(JSON.stringify(comparableGateway(spec))), backendHash: 'old-api', assets: Object.fromEntries(Object.entries(storage).map(([k, v]) => [k, hash(v)])) }));
   const adapter = {
@@ -57,12 +57,13 @@ function setup({ fail, baseline = false, noEvidence = false } = {}) {
     probe: (tag, path) => { assert.equal(tags[tag].id, 'v2'); event('probe:' + path); },
   };
   const options = {
+    ydbToken: 'fixture-iam-token',
     git: args => args[0] === 'status' ? '' : args[0] === 'rev-parse' ? commit : 'src/styles.css\0',
     dependencies: () => ['yandex-api/index.ts'],
     makeAdapter: () => adapter,
     approval: async (_, word) => { approvals.push(word); if (fail === 'approval' && word === 'DEPLOY') throw Error('Approval declined'); },
-    execute: (tool, args) => {
-      if (tool === 'node') { writeFileSync(args[2], JSON.stringify({ pending: [], planHash: 'migration-plan', needsSchemaApproval: false })); return; }
+    execute: (tool, args, options = {}) => {
+      if (tool === 'node') { tokenFileSeen = options.env?.YDB_TOKEN_FILE; assert.ok(tokenFileSeen); assert.equal(statSync(tokenFileSeen).mode & 0o077, 0); writeFileSync(args[2], JSON.stringify({ pending: [], planHash: 'migration-plan', needsSchemaApproval: false })); return; }
       if (tool === 'npm') { writeFileSync('.output/public/_shell.html', 'new entry'); writeFileSync('.output/public/assets/new.js', 'new script'); }
       if (tool === 'bash') {
         writeFileSync('yandex-api/pravdarula-api.zip', 'new archive');
@@ -78,7 +79,7 @@ function setup({ fail, baseline = false, noEvidence = false } = {}) {
       }
     },
   };
-  return { env, options, state, commands, approvals, storage, cleanup: () => { process.chdir(cwd); rmSync(root, { recursive: true }); } };
+  return { env, options, state, commands, approvals, storage, get tokenFileSeen() { return tokenFileSeen; }, cleanup: () => { process.chdir(cwd); rmSync(root, { recursive: true }); } };
 }
 
 for (const kind of ['missing', 'wrong-commit', 'wrong-hash', 'unreviewed-extra', 'correct']) {
@@ -112,6 +113,7 @@ test('full release: baseline pin precedes new latest; manifest follows actual st
     assert.ok(f.commands.indexOf('pin-gateway') < f.commands.indexOf('candidate-create'));
     assert.ok(f.commands.indexOf('upload:index.html') < f.commands.indexOf('activate'));
     assert.ok(f.approvals.includes('BASELINE')); assert.ok(f.approvals.includes('COMPATIBLE')); assert.ok(f.approvals.includes('DEPLOY'));
+    assert.ok(f.tokenFileSeen); assert.equal(existsSync(f.tokenFileSeen), false, 'short-lived IAM token is cleaned after the run');
   } finally { f.cleanup(); }
 });
 for (const failure of ['candidate-create', 'candidate-config', 'probe:/api/health', 'upload:index.html', 'activate', 'activated-health']) {

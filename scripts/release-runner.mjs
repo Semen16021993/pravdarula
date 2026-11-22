@@ -82,6 +82,7 @@ export async function runRelease(env = process.env, testing = {}) {
     throw Error(`Release lock exists: ${lock}. Verify no release process is running on this Mac, inspect pending.json and snapshots, then remove ONLY the empty lock directory after operator review. Never delete pending.json. Run the same command again and choose RECOVER. No automatic lock expiry.`);
   }
   let cleanExit = false;
+  let ydbTokenFile = null;
   try {
     if (existsSync(join(state, 'pending.json'))) {
       await ask(`Unfinished release. Only verified recovery is available. Inspect ${state}/pending.json.`, 'RECOVER');
@@ -131,9 +132,14 @@ export async function runRelease(env = process.env, testing = {}) {
     save('gateway-desired.json', desired);
     if (!equal(comparableGateway(oldGateway), comparableGateway(desired))) plan.gateway = true;
     if (!previous) await ask('First baseline: inspect saved Function settings, secret IDs/keys/versions, Gateway and permissions. This is NOT yet deployment approval.', 'BASELINE');
+    // Create a fresh short-lived IAM token in a private file; never put credentials in CLI args or logs.
+    const ydbToken = testing.ydbToken ?? execute('yc', ['iam', 'create-token'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    if (typeof ydbToken !== 'string' || !ydbToken.trim()) throw Error('Could not obtain a fresh YDB IAM token');
+    ydbTokenFile = join(directory, 'ydb-iam-token');
+    writeFileSync(ydbTokenFile, ydbToken.trim() + '\n', { mode: 0o600 });
     await adapter.verifyPublic();
     // Read-only schema check even if there are no migrations; no cloud writes here.
-    execute('node', ['yandex-api/migrate.mjs', 'check', join(directory, 'migrations-check.json')], { stdio: 'inherit', env: { ...env, RELEASE_STATE: state, RELEASE_DIRECTORY: directory } });
+    execute('node', ['yandex-api/migrate.mjs', 'check', join(directory, 'migrations-check.json')], { stdio: 'inherit', env: { ...env, YDB_TOKEN_FILE: ydbTokenFile, RELEASE_STATE: state, RELEASE_DIRECTORY: directory } });
     const migrationCheck = JSON.parse(readFileSync(join(directory, 'migrations-check.json'), 'utf8'));
     if (migrationCheck.needsSchemaApproval) {
       await ask(`Inspect ${directory}/schema-observed.json: exact types/nullability, keys, indexes and table options of baseline and previously migrated tables. No inferred cabinets/orders types are trusted. Adopt this local baseline?`, 'SCHEMA');
@@ -205,7 +211,7 @@ export async function runRelease(env = process.env, testing = {}) {
     }
     if (migrationCheck.pending.length) {
       pending.migrationStarted = true; phase('migrations');
-      execute('node', ['yandex-api/migrate.mjs', 'apply', join(directory, 'migrations-applied.json')], { stdio: 'inherit', env: { ...env, RELEASE_STATE: state, RELEASE_DIRECTORY: directory, APPROVED_MIGRATION_HASH: migrationCheck.planHash, APPROVE_YDB_BASELINE: 'yes' } });
+      execute('node', ['yandex-api/migrate.mjs', 'apply', join(directory, 'migrations-applied.json')], { stdio: 'inherit', env: { ...env, YDB_TOKEN_FILE: ydbTokenFile, RELEASE_STATE: state, RELEASE_DIRECTORY: directory, APPROVED_MIGRATION_HASH: migrationCheck.planHash, APPROVE_YDB_BASELINE: 'yes' } });
     }
     phase('frontend-upload');
     if (plan.frontend) {
@@ -229,6 +235,8 @@ export async function runRelease(env = process.env, testing = {}) {
     cleanExit = true;
     console.log(`Release verified: ${commit}. Recovery snapshots: ${directory}`);
   } finally {
+    // Short-lived YDB token is not part of the durable audit record.
+    if (ydbTokenFile) try { unlinkSync(ydbTokenFile); } catch { /* best-effort secret cleanup */ }
     // Normal failures keep pending.json but release the process lock. A killed process keeps both.
     try { execFileSync('rmdir', [lock]); } catch { /* fail closed */ }
     if (!cleanExit) console.error(`Release NOT completed. Inspect ${state}; next deployment is blocked if pending.json exists. YDB is never automatically rolled back.`);
