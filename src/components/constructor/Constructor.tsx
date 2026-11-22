@@ -129,7 +129,7 @@ export function Constructor({ userId, email, preview: requestedPreview = false, 
       <header className="app-header mx-4 mt-4 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-3xl bg-card px-4 py-3 shadow-soft sm:mx-auto sm:flex sm:max-w-6xl sm:justify-between sm:px-6 sm:py-4">
         <Button variant="ghost" onClick={reset} className="h-auto min-w-0 flex-col items-start gap-0 whitespace-normal p-0 text-left leading-tight hover:bg-transparent">
           <span className="block font-serif text-lg font-bold text-heading">Право Руля</span>
-          <span className="text-xs text-muted-foreground">конструктор документов · ст. 12.27 ч. 2</span>
+          <span className="font-normal text-xs text-muted-foreground"><span className="hidden sm:inline">конструктор документов · </span><span className="whitespace-nowrap">ст. 12.27 ч. 2</span></span>
         </Button>
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           <Button size="sm" className="h-11 w-11 p-0 sm:h-9 sm:w-auto sm:px-3" aria-label={`Мои документы${purchases.length ? ` (${purchases.length})` : ""}`} title="Мои документы" variant={s.step === "cabinet" ? "default" : "outline"} onClick={() => set({ step: "cabinet" })}><FolderOpen /><span className="hidden sm:inline">Мои документы{purchases.length ? ` (${purchases.length})` : ""}</span></Button>

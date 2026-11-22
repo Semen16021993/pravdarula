@@ -238,3 +238,39 @@ button:hover .document-card-hint, button:focus-visible .document-card-hint { ani
   .wallet-card { padding-left: 1rem; padding-right: 1rem; }
   .wallet-card[data-open="true"] .wallet-body { padding: 1rem; }
 }
+
+@media (max-width: 639px) {
+  .app-header { margin-top: .5rem; padding-block: .5rem; }
+  .app-shell main { padding-top: 1rem; }
+  .app-shell main h1 { font-size: 1.625rem; line-height: 1.15; }
+  .app-shell main h2 { font-size: 1.375rem; line-height: 1.2; }
+  .app-shell main > section > p { font-size: 1rem; line-height: 1.4; margin-top: .75rem; }
+  .app-shell .panel { padding: 1rem; }
+  .app-shell .panel > p { line-height: 1.4; }
+  .app-shell .panel > svg { width: 1.75rem; height: 1.75rem; }
+  .app-shell .panel > h2 { margin-top: .75rem; }
+
+  .onboarding-shell { display: flex; flex-direction: column; }
+  .onboarding-shell header { width: 100%; padding-block: .625rem; }
+  .onboarding-main {
+    width: 100%; min-height: 0; flex: 1; padding-top: .5rem;
+    padding-bottom: 0;
+  }
+  .onboarding-image {
+    height: clamp(4rem, calc(100svh - 34rem), 9rem);
+    flex-shrink: 0; margin-bottom: .5rem;
+  }
+  .onboarding-shell main h1 { font-size: 1.5rem; line-height: 1.1; }
+  .onboarding-copy { margin-top: .625rem; line-height: 1.35; }
+  .onboarding-copy > p + p { margin-top: .625rem; }
+  .onboarding-actions {
+    position: sticky; bottom: 0; z-index: 10;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    margin-top: .75rem; padding-block: .5rem;
+    padding-bottom: max(.5rem, env(safe-area-inset-bottom));
+    background: var(--background); gap: .5rem;
+  }
+  .onboarding-dots { order: 0; grid-column: auto; gap: .25rem; }
+  .onboarding-dots > span { width: .75rem; }
+  .onboarding-actions button { padding-inline: 1rem; }
+}

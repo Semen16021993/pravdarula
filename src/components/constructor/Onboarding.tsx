@@ -51,7 +51,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
   if (!screen) return null;
 
   return (
-    <div className="app-shell min-h-svh">
+    <div className="app-shell onboarding-shell min-h-svh">
       <header className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-border px-4 py-4 sm:flex sm:justify-between sm:px-8 sm:py-5">
         <div className="min-w-0 leading-tight">
           <span className="block font-serif text-xl font-bold text-heading">Право Руля</span>
@@ -60,7 +60,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
         <span className="shrink-0 text-sm text-muted-foreground" aria-label={`Шаг ${step + 1} из 3`}>0{step + 1} / 03</span>
       </header>
 
-      <main className="mx-auto flex min-h-[calc(100svh-5.5rem)] min-w-0 max-w-3xl flex-col px-4 pb-6 pt-4 sm:px-8 sm:pt-5">
+      <main className="onboarding-main mx-auto flex min-h-[calc(100svh-5.5rem)] min-w-0 max-w-3xl flex-col px-4 pb-6 pt-4 sm:px-8 sm:pt-5">
         <div key={step} className="onboarding-enter flex min-h-0 flex-1 flex-col">
           <img
             src={screen.image}
@@ -68,23 +68,23 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
             width={1170}
             height={499}
             loading={step === 0 ? "eager" : "lazy"}
-            className="mx-auto mb-4 h-[clamp(9rem,30svh,24rem)] w-full object-contain"
+            className="onboarding-image mx-auto mb-4 h-[clamp(9rem,30svh,24rem)] w-full object-contain"
           />
           <h1 ref={heading} tabIndex={-1} className="text-3xl font-bold leading-tight outline-none sm:text-4xl">
             {screen.title}
           </h1>
-          <div className="mt-4 space-y-3 text-base leading-relaxed sm:text-lg">
+          <div className="onboarding-copy mt-4 space-y-3 text-base leading-relaxed sm:text-lg">
             {screen.paragraphs.map((paragraph, index) => (
               <p key={paragraph} className={index === 0 ? "text-muted-foreground" : "text-foreground"}>{paragraph}</p>
             ))}
           </div>
         </div>
 
-        <div className="mt-6 grid shrink-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 border-t border-border pt-4 sm:flex sm:justify-between sm:gap-4">
+        <div className="onboarding-actions mt-6 grid shrink-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 border-t border-border pt-4 sm:flex sm:justify-between sm:gap-4">
           {step > 0 ? (
             <Button variant="ghost" size="icon" aria-label="Назад" title="Назад" onClick={() => setStep(step - 1)}><ArrowLeft /></Button>
           ) : <span className="size-9" aria-hidden="true" />}
-          <div className="order-first col-span-2 flex justify-center gap-2 sm:order-none" aria-hidden="true">
+          <div className="onboarding-dots order-first col-span-2 flex justify-center gap-2 sm:order-none" aria-hidden="true">
             {screens.map((_, index) => <span key={index} className={`h-1.5 w-5 rounded-full ${index === step ? "bg-primary" : "bg-border"}`} />)}
           </div>
           <Button size="lg" className="min-h-12 justify-self-end" onClick={() => step < 2 ? setStep(step + 1) : onComplete()}>

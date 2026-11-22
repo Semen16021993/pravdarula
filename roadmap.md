@@ -1,4 +1,5 @@
 # Responsive screens
+- [x] Correct mobile density and header legal reference; all three introduction screens fit simulated iPhone 13 content heights 664/680/724px without scrolling, with 16px body text and immediately visible actions. Repeated 378 workflow checks and DOCX/PDF/ZIP downloads passed; real-device Safari remains unverified, production unchanged.
 - [x] Adapt login, introduction, constructor, cart, payment result and cabinet for phones, tablets and desktop widths.
 - [x] Verify all stages and both purchase modes: 378 browser checks at widths 320–2560px without overflow or runtime errors; DOCX/PDF/ZIP downloads passed. Both login screens additionally checked with intercepted local responses at seven sizes. All 13 existing frontend tests passed; no production deployment or live auth/payment checks.
 
