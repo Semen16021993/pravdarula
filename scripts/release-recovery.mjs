@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, existsSync, unlinkSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { hash, fileManifest } from './release-plan.mjs';
-import { assertSameFunction, assertGateway, gatewaySpec, gatewayTags, pinGateway, writeGateway, equal, comparableGateway } from './release-safety.mjs';
+import { assertSameFunction, assertGateway, gatewaySpec, gatewayTags, pinGateway, writeGateway, equal, sameDeployedGateway, comparableGateway } from './release-safety.mjs';
 
 export const contentType = path => {
   // Nitro emits this Cloudflare-specific header manifest without an extension.
@@ -45,7 +45,7 @@ export async function recoverRelease(state, adapter) {
   writeGateway(recoverySpec, pinned);
   adapter.cloud(['serverless', 'api-gateway', 'update', pending.gatewayId, '--spec', recoverySpec, '--format', 'json']);
   live = gatewaySpec(adapter.gateway ? adapter.gateway(pending.gatewayId) : adapter.cloud(['serverless', 'api-gateway', 'get', pending.gatewayId, '--format', 'json']));
-  if (!equal(live, pinned)) throw Error('Gateway recovery read-back mismatch');
+  if (!sameDeployedGateway(live, pinned)) throw Error('Gateway recovery read-back mismatch');
   await adapter.verifyStatic(pending.backupHashes);
   await adapter.verifyPublic();
   const savedManifest = join(pending.directory, 'current-before.json');

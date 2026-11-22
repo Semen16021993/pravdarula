@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { functionConfig, verifyFunction, assertSameFunction, candidateArgs, pinGateway, gatewayTags, assertEndpoints, assertPendingClear, assertGateway, gatewaySpec, comparableGateway, writeGateway } from './release-safety.mjs';
+import { functionConfig, verifyFunction, assertSameFunction, candidateArgs, pinGateway, gatewayTags, assertEndpoints, assertPendingClear, assertGateway, gatewaySpec, sameDeployedGateway, comparableGateway, writeGateway } from './release-safety.mjs';
 import { parse } from 'yaml';
 const env = { YC_FUNCTION_ID: 'fn', YC_RUNTIME_SA_ID: 'sa', YC_GATEWAY_SA_ID: 'gateway-sa', YC_AUTH_SECRET_ID: 'auth', YC_PAY_SECRET_ID: 'pay', APP_BASE_URL: 'https://pravdarula.ru', YDB_CONNECTION_STRING: 'test-db' };
 const version = { id: 'v1', function_id: 'fn', runtime: 'nodejs22', entrypoint: 'index.handler', resources: { memory: '268435456' }, execution_timeout: '30s', service_account_id: 'sa', environment: { APP_BASE_URL: env.APP_BASE_URL, YDB_CONNECTION_STRING: 'test-db', YANDEX_PAY_ENV: 'sandbox', EXTRA: 'preserved' }, secrets: [ { id: 'auth', key: 'AUTH_SECRET', version_id: 'a1', environment_variable: 'AUTH_SECRET' }, { id: 'pay', key: 'YANDEX_PAY_SANDBOX_API_KEY', version_id: 'p1', environment_variable: 'YANDEX_PAY_SANDBOX_API_KEY' } ], concurrency: '2', metadata_options: { aws_v1_http_endpoint: 'DISABLED' } };
@@ -59,4 +59,11 @@ test('Gateway invocation identity is distinct from Function runtime identity', (
   const spec = { paths: { '/api/health': { get: { 'x-yc-apigateway-integration': { type: 'cloud_functions', function_id: 'fn', service_account_id: 'gateway-sa', tag: '$latest' } } } } };
   assertGateway(spec, env);
   assert.throws(() => assertGateway({ paths: { '/api/health': { get: { 'x-yc-apigateway-integration': { type: 'cloud_functions', function_id: 'fn', service_account_id: 'runtime-sa', tag: '$latest' } } } } }, env), /Gateway Function\/SA\/tag mismatch/);
+});
+
+test('Gateway read-back allows generated server URLs and enforces the active function tag', () => {
+  const desired = { paths: { '/api': { get: { 'x-yc-apigateway-integration': { type: 'cloud_functions', tag: 'release-v2' } } } } };
+  const live = { ...desired, servers: [{ url: 'https://example.test' }] };
+  assert.ok(sameDeployedGateway(live, desired));
+  assert.ok(!sameDeployedGateway(pinGateway(live, 'release-v1'), desired));
 });

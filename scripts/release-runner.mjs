@@ -3,7 +3,7 @@ import { dirname, join, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { planChanges, parseGitPaths, backendDependencies, backendEndpoints, assertSourceBoundary, hash, assertProductionAssets, fileManifest } from './release-plan.mjs';
-import { normalize, verifyFunction, assertSameFunction, candidateArgs, gatewaySpec, assertGateway, gatewayTags, pinGateway, writeGateway, equal, comparableGateway, assertEndpoints, assertReadOnlyProbe } from './release-safety.mjs';
+import { normalize, verifyFunction, assertSameFunction, candidateArgs, gatewaySpec, assertGateway, gatewayTags, pinGateway, writeGateway, equal, sameDeployedGateway, comparableGateway, assertEndpoints, assertReadOnlyProbe } from './release-safety.mjs';
 import { contentType, savePending, recoverRelease } from './release-recovery.mjs';
 
 const git = args => execFileSync('git', args, { encoding: 'utf8' }).trim();
@@ -205,7 +205,7 @@ export async function runRelease(env = process.env, testing = {}) {
     const pinnedFile = join(directory, 'gateway-pinned-old.yaml'); writeGateway(pinnedFile, pinnedOld);
     phase('pin-gateway-before-candidate');
     adapter.cloud(['serverless', 'api-gateway', 'update', env.YC_GATEWAY_ID, '--spec', pinnedFile, '--format', 'json']);
-    if (!equal(gatewaySpec(adapter.gateway ? adapter.gateway(env.YC_GATEWAY_ID) : adapter.cloud(['serverless', 'api-gateway', 'get', env.YC_GATEWAY_ID, '--format', 'json'])), pinnedOld)) throw Error('Gateway pin read-back failed');
+    if (!sameDeployedGateway(gatewaySpec(adapter.gateway ? adapter.gateway(env.YC_GATEWAY_ID) : adapter.cloud(['serverless', 'api-gateway', 'get', env.YC_GATEWAY_ID, '--format', 'json'])), pinnedOld)) throw Error('Gateway pin read-back failed');
     await adapter.verifyPublic();
     }
     let active = before;
@@ -238,7 +238,7 @@ export async function runRelease(env = process.env, testing = {}) {
       phase('gateway-activation');
       adapter.cloud(['serverless', 'api-gateway', 'update', env.YC_GATEWAY_ID, '--spec', activationFile, '--format', 'json']);
     }
-    if (!equal(gatewaySpec(adapter.gateway ? adapter.gateway(env.YC_GATEWAY_ID) : adapter.cloud(['serverless', 'api-gateway', 'get', env.YC_GATEWAY_ID, '--format', 'json'])), activated)) throw Error('Activated Gateway mismatch');
+    if (!sameDeployedGateway(gatewaySpec(adapter.gateway ? adapter.gateway(env.YC_GATEWAY_ID) : adapter.cloud(['serverless', 'api-gateway', 'get', env.YC_GATEWAY_ID, '--format', 'json'])), activated)) throw Error('Activated Gateway mismatch');
     if (adapter.cloud(['serverless', 'function', 'version', 'get-by-tag', '--function-id', env.YC_FUNCTION_ID, '--tag', newTag, '--format', 'json']).id !== active.id) throw Error('Active version mismatch');
     await adapter.verifyStatic(assets); await adapter.verifyPublic();
     phase('verified');

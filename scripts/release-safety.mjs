@@ -101,6 +101,10 @@ export function writeGateway(path, spec) {
   delete deployable.servers;
   writeFileSync(path, stringify(deployable));
 }
+export function sameDeployedGateway(actual, expected) {
+  const authored = ({ servers, ...spec }) => spec;
+  return equal(authored(actual), authored(expected));
+}
 export function comparableGateway(spec) {
   const comparable = structuredClone(spec);
   // Ignore Yandex-generated domain URLs when comparing the authored OpenAPI configuration.
