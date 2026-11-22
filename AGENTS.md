@@ -32,3 +32,4 @@ use the editor.
 - Keep the three-screen introduction in a separate presentation component before mounting the existing constructor; this preserves the order workflow and its saved state.
 - Use a shared DocumentCard with descriptions from a browser-safe catalog module wherever individual documents appear; this keeps flip behavior and fixed-size internal scrolling consistent without affecting purchase or download actions.
 - Personal cabinet: login (email one-time code) gates / before Onboarding; per-user form and purchases live in the cabinets table, localStorage is only a per-user cache — so documents can be re-downloaded on any device.
+- Frontend demo mode is selected after hydration only for this project's verified Preview hosts; isolate mock cabinet storage and skip all auth, cabinet and payment API calls there so interface development cannot mutate Yandex data.

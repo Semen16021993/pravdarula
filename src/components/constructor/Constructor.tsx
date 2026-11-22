@@ -13,6 +13,7 @@ import { DocumentCard } from "./DocumentCard";
 import { checkPayment, createPayment } from "@/lib/payments.functions";
 import { FileCabinet } from "./FileCabinet";
 import { buildDoc, buildInstruction, demoForm, download, downloadPdf, downloadZip, emptyForm, type FormData } from "@/lib/docgen";
+import { loadPreviewCabinet, savePreviewCabinet, previewPurchase } from "@/lib/preview-cabinet";
 
 type Step = "mode" | "stage" | "form" | "offer" | "paid" | "cabinet";
 type OrderStatus = "draft" | "pending" | "paid" | "failed";
@@ -41,7 +42,7 @@ function formatPhone(raw: string) {
 
 const filled = (o: object) => Object.fromEntries(Object.entries(o).filter(([, v]) => String(v ?? "").trim()));
 
-export function Constructor({ userId, email }: { userId: string; email: string }) {
+export function Constructor({ userId, email, preview = false, onIntroduction }: { userId: string; email: string; preview?: boolean; onIntroduction?: () => void }) {
   const [s, setS] = useState<State>(initial);
   const [loaded, setLoaded] = useState(false);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
@@ -52,6 +53,13 @@ export function Constructor({ userId, email }: { userId: string; email: string }
       const raw = localStorage.getItem(key);
       if (raw) saved = { ...initial, ...JSON.parse(raw) };
     } catch { /* ignore */ }
+    if (preview) {
+      const cab = loadPreviewCabinet();
+      setPurchases(cab.purchases);
+      setS({ ...saved, step: "cabinet", form: { ...demoForm, ...filled(cab.form) } as FormData });
+      setLoaded(true);
+      return;
+    }
     loadCabinet(userId).then((cab) => {
       setPurchases(cab.purchases);
       // Анкета из кабинета важнее локальной; демо-данные — во все оставшиеся пустые поля.
@@ -59,17 +67,24 @@ export function Constructor({ userId, email }: { userId: string; email: string }
       setS({ ...saved, form });
       setLoaded(true);
     }).catch(() => { setS({ ...saved, form: { ...demoForm, ...filled(saved.form) } as FormData }); setLoaded(true); });
-  }, [userId]);
+  }, [userId, preview]);
   useEffect(() => { if (loaded) localStorage.setItem(key, JSON.stringify(s)); }, [s, loaded]);
   useEffect(() => {
     if (!loaded) return;
+    if (preview) {
+      savePreviewCabinet({ form: s.form, purchases });
+      return;
+    }
     const t = setTimeout(() => { saveForm(userId, s.form); }, 800);
     return () => clearTimeout(t);
-  }, [s.form, loaded, userId]);
-  const onPaid = async (_p: Purchase) => { setPurchases((await loadCabinet(userId)).purchases); };
+  }, [s.form, loaded, userId, preview, purchases]);
+  const onPaid = async (p: Purchase) => {
+    if (preview) { setPurchases((previous) => [...previous, p]); return; }
+    setPurchases((await loadCabinet(userId)).purchases);
+  };
   const [checking, setChecking] = useState<null | "wait" | "fail">(null);
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || preview) return;
     const q = new URLSearchParams(window.location.search);
     const orderId = q.get("order");
     if (!orderId) return;
@@ -92,8 +107,11 @@ export function Constructor({ userId, email }: { userId: string; email: string }
     };
     tick();
     return () => { stop = true; };
-  }, [loaded]);
-  const signOut = async () => { await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }); window.location.reload(); };
+  }, [loaded, preview]);
+  const signOut = async () => {
+    if (preview) { reset(); return; }
+    await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }); window.location.reload();
+  };
   useEffect(() => { window.scrollTo({ top: 0, behavior: "smooth" }); }, [s.step]);
 
   const set = (p: Partial<State>) => setS((x) => ({ ...x, ...p }));
@@ -119,6 +137,13 @@ export function Constructor({ userId, email }: { userId: string; email: string }
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-10">
+        {preview && <div className="mb-6 flex flex-wrap items-center gap-2 border-b border-border pb-4">
+          <span className="mr-2 text-sm text-muted-foreground">Preview · демонстрационный кабинет</span>
+          <Button variant="outline" size="sm" onClick={reset}>Новый заказ</Button>
+          <Button variant="outline" size="sm" onClick={() => set({ mode: s.mode ?? "complex", stage: s.stage ?? 1, step: "form", consent: true })}>Анкета</Button>
+          <Button variant="outline" size="sm" onClick={() => set({ mode: "complex", stage: s.stage ?? 1, step: "offer" })}>План действий</Button>
+          <Button variant="ghost" size="sm" onClick={onIntroduction}>Знакомство</Button>
+        </div>}
         {s.step !== "mode" && s.step !== "cabinet" && (
           <div className="mb-6 flex items-center gap-4">
             {s.step !== "paid" && <Button variant="ghost" size="sm" onClick={back}><ArrowLeft /> Назад</Button>}
@@ -142,8 +167,8 @@ export function Constructor({ userId, email }: { userId: string; email: string }
         {s.step === "mode" && <ModeStep onPick={(mode) => set({ mode, step: "stage" })} />}
         {s.step === "stage" && <StageStep s={s} set={set} />}
         {s.step === "form" && <FormStep s={s} set={set} />}
-        {s.step === "offer" && s.mode === "single" && <CatalogStep s={s} set={set} onPaid={onPaid} />}
-        {s.step === "offer" && s.mode === "complex" && <ComplexStep s={s} set={set} onPaid={onPaid} />}
+        {s.step === "offer" && s.mode === "single" && <CatalogStep s={s} set={set} onPaid={onPaid} preview={preview} />}
+        {s.step === "offer" && s.mode === "complex" && <ComplexStep s={s} set={set} onPaid={onPaid} preview={preview} />}
         {s.step === "paid" && <PaidStep s={s} onReset={reset} />}
         {s.step === "cabinet" && <CabinetStep form={s.form} email={email} purchases={purchases} onMore={reset} />}
       </main>
@@ -151,7 +176,7 @@ export function Constructor({ userId, email }: { userId: string; email: string }
   );
 }
 
-type P = { s: State; set: (p: Partial<State>) => void; onPaid?: ((p: Purchase) => void) | undefined };
+type P = { s: State; set: (p: Partial<State>) => void; onPaid?: ((p: Purchase) => void | Promise<void>) | undefined; preview?: boolean | undefined };
 
 function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
   return (
@@ -274,12 +299,18 @@ function FormStep({ s, set }: P) {
   );
 }
 
-function PayBox({ total, items, s, set }: P & { total: number; items: string[] }) {
+function PayBox({ total, items, s, set, preview, onPaid }: P & { total: number; items: string[] }) {
   const [err, setErr] = useState("");
   const pay = async () => {
+    if (!s.mode || !s.stage || !items.length) return;
+    if (preview) {
+      await onPaid?.(previewPurchase(s.mode, s.stage, items));
+      set({ purchased: [...items], cart: [], status: "paid", step: "paid" });
+      return;
+    }
     setErr(""); set({ status: "pending" });
     try {
-      const { paymentUrl } = await createPayment({ data: { mode: s.mode!, stage: s.stage!, docs: items } });
+      const { paymentUrl } = await createPayment({ data: { mode: s.mode, stage: s.stage, docs: items } });
       window.location.href = paymentUrl;
     } catch (e) {
       set({ status: "failed" });
@@ -292,14 +323,14 @@ function PayBox({ total, items, s, set }: P & { total: number; items: string[] }
       <p className="font-serif text-4xl font-bold text-heading">{rub(total)}</p>
       {s.status === "failed" && <p className="mt-3 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{err || "Оплата не подтверждена — доступ не открыт. Попробуйте ещё раз."}</p>}
       <Button className="mt-5 w-full" size="lg" disabled={!items.length || s.status === "pending"} onClick={pay}>
-        {s.status === "pending" ? <><Loader2 className="animate-spin" /> Переходим к оплате…</> : "Оплатить"}
+        {s.status === "pending" ? <><Loader2 className="animate-spin" /> Переходим к оплате…</> : preview ? "Открыть демо-документы" : "Оплатить"}
       </Button>
       <p className="mt-3 text-xs text-muted-foreground">Оплата через Яндекс Пэй: картой, СБП или частями со Сплитом.</p>
     </div>
   );
 }
 
-function CatalogStep({ s, set, onPaid }: P) {
+function CatalogStep({ s, set, onPaid, preview }: P) {
   const stage = s.stage!;
   const toggle = (id: string) => set({ cart: s.cart.includes(id) ? s.cart.filter((x) => x !== id) : [...s.cart, id], status: "draft" });
   return (
@@ -338,7 +369,7 @@ function CatalogStep({ s, set, onPaid }: P) {
               </ul>
             )}
           </div>
-          <PayBox s={s} set={set} onPaid={onPaid} total={cartTotal(s.cart)} items={s.cart} />
+          <PayBox s={s} set={set} onPaid={onPaid} preview={preview} total={cartTotal(s.cart)} items={s.cart} />
         </div>
       </div>
     </section>
@@ -385,7 +416,7 @@ function RoadmapView({ stage, locked, onDoc }: { stage: Stage; locked: boolean; 
   );
 }
 
-function ComplexStep({ s, set, onPaid }: P) {
+function ComplexStep({ s, set, onPaid, preview }: P) {
   const stage = s.stage!;
   const items = complexDocs(stage);
   const sum = cartTotal(items);
@@ -405,7 +436,7 @@ function ComplexStep({ s, set, onPaid }: P) {
             </ul>
             <p className="mt-3 text-xs text-muted-foreground">По отдельности документы стоили бы {rub(sum)}.</p>
           </div>
-          <PayBox s={s} set={set} onPaid={onPaid} total={COMPLEX_PRICE[stage]} items={items} />
+          <PayBox s={s} set={set} onPaid={onPaid} preview={preview} total={COMPLEX_PRICE[stage]} items={items} />
         </div>
       </div>
     </section>

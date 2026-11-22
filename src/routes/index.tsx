@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Constructor } from "@/components/constructor/Constructor";
 import { Onboarding } from "@/components/constructor/Onboarding";
 import { Login } from "@/components/constructor/Login";
+import { isProjectPreview, PREVIEW_USER } from "@/lib/preview-mode";
 
 type CurrentUser = { id: string; email: string };
 
@@ -23,8 +24,15 @@ export const Route = createFileRoute("/")({
 function DocumentEntry() {
   const [user, setUser] = useState<CurrentUser | null | undefined>(undefined);
   const [started, setStarted] = useState(false);
+  const [preview, setPreview] = useState(false);
 
   useEffect(() => {
+    if (isProjectPreview(window.location.hostname)) {
+      setPreview(true);
+      setUser(PREVIEW_USER);
+      setStarted(true);
+      return;
+    }
     let active = true;
     fetch("/api/auth/me", { credentials: "same-origin", cache: "no-store" })
       .then(async (response) => {
@@ -45,6 +53,6 @@ function DocumentEntry() {
   if (user === undefined) return <div className="min-h-screen" />;
   if (!user) return <Login />;
   return started
-    ? <Constructor userId={user.id} email={user.email} />
+    ? <Constructor userId={user.id} email={user.email} preview={preview} onIntroduction={() => setStarted(false)} />
     : <Onboarding onComplete={() => { window.scrollTo(0, 0); setStarted(true); }} />;
 }
