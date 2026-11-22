@@ -94,13 +94,6 @@ export function assertEndpoints(spec, endpoints) {
   for (const endpoint of endpoints) if (!routes.has(endpoint)) throw Error(`API endpoint not routed by Gateway: ${endpoint}`);
   for (const route of routes) if (!endpoints.includes(route)) throw Error(`Gateway endpoint absent from verified handler inventory: ${route}`);
 }
-export function assertCompatibility(evidence, expected) {
-  for (const key of ['commit', 'previousVersion', 'frontendHash', 'backendHash', 'gatewayHash']) if (evidence?.[key] !== expected[key]) throw Error(`Compatibility evidence does not match ${key}`);
-  for (const name of ['oldFrontendNewBackend', 'newFrontendOldBackend', 'signedInSession', 'sandboxPayment']) {
-    const check = evidence?.checks?.[name];
-    if (!check || check.passed !== true || !check.report || !existsSync(check.report) || hash(readFileSync(check.report)) !== check.sha256) throw Error(`Missing verified compatibility report: ${name}; perform isolated checks, never approve blindly`);
-  }
-}
 export function assertPendingClear(state) {
   if (existsSync(state + '/pending.json')) throw Error(`Unfinished release blocks deploy. Run the same command and choose RECOVER. Inspect ${state}/pending.json; never delete it to bypass checks.`);
 }

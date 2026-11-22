@@ -22,7 +22,7 @@ export async function recoverRelease(state, adapter) {
   const before = JSON.parse(readFileSync(join(pending.directory, 'version-before.json'), 'utf8'));
   const version = adapter.cloud(['serverless', 'function', 'version', 'get', pending.previousVersion, '--format', 'json']);
   assertSameFunction(before, version);
-  let live = gatewaySpec(adapter.cloud(['serverless', 'api-gateway', 'get', pending.gatewayId, '--format', 'json']));
+  let live = gatewaySpec(adapter.gateway ? adapter.gateway(pending.gatewayId) : adapter.cloud(['serverless', 'api-gateway', 'get', pending.gatewayId, '--format', 'json']));
   assertGateway(live, pending.env);
   const old = gatewaySpec(JSON.parse(readFileSync(join(pending.directory, 'gateway-before.json'), 'utf8')));
   const allowedTags = [...gatewayTags(old), pending.previousTag, ...(pending.candidateVersion ? [`release-${pending.candidateVersion}`] : [])];
@@ -41,7 +41,7 @@ export async function recoverRelease(state, adapter) {
   const recoverySpec = join(pending.directory, 'gateway-recovery.yaml');
   writeGateway(recoverySpec, pinned);
   adapter.cloud(['serverless', 'api-gateway', 'update', pending.gatewayId, '--spec', recoverySpec, '--format', 'json']);
-  live = gatewaySpec(adapter.cloud(['serverless', 'api-gateway', 'get', pending.gatewayId, '--format', 'json']));
+  live = gatewaySpec(adapter.gateway ? adapter.gateway(pending.gatewayId) : adapter.cloud(['serverless', 'api-gateway', 'get', pending.gatewayId, '--format', 'json']));
   if (!equal(live, pinned)) throw Error('Gateway recovery read-back mismatch');
   await adapter.verifyStatic(pending.backupHashes);
   await adapter.verifyPublic();

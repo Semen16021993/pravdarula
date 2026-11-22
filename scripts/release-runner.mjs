@@ -1,17 +1,11 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, mkdtempSync, unlinkSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { createInterface } from 'node:readline/promises';
 import { pathToFileURL } from 'node:url';
 import { planChanges, parseGitPaths, backendDependencies, backendEndpoints, assertSourceBoundary, hash, assertProductionAssets, fileManifest } from './release-plan.mjs';
-import { normalize, verifyFunction, assertSameFunction, candidateArgs, gatewaySpec, assertGateway, gatewayTags, pinGateway, writeGateway, equal, comparableGateway, assertEndpoints, assertCompatibility, assertReadOnlyProbe } from './release-safety.mjs';
+import { normalize, verifyFunction, assertSameFunction, candidateArgs, gatewaySpec, assertGateway, gatewayTags, pinGateway, writeGateway, equal, comparableGateway, assertEndpoints, assertReadOnlyProbe } from './release-safety.mjs';
 import { contentType, savePending, recoverRelease } from './release-recovery.mjs';
 
-export async function approval(text, word) {
-  if (!process.stdin.isTTY) throw Error('Interactive approval required; no unattended writes');
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  try { if ((await rl.question(`${text}\nType ${word}: `)) !== word) throw Error('Cancelled'); } finally { rl.close(); }
-}
 const git = args => execFileSync('git', args, { encoding: 'utf8' }).trim();
 export function makeAdapter(env, directory) {
   const command = (tool, args, options = {}) => execFileSync(tool, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 180000, ...options });
@@ -64,7 +58,6 @@ export function makeAdapter(env, directory) {
 
 export async function runRelease(env = process.env, testing = {}) {
   // Injectable local adapters allow full failure/recovery rehearsal without any cloud access.
-  const ask = testing.approval || approval;
   const execute = testing.execute || execFileSync;
   const readGit = testing.git || git;
   const adapterFactory = testing.makeAdapter || makeAdapter;
@@ -83,9 +76,10 @@ export async function runRelease(env = process.env, testing = {}) {
   }
   let cleanExit = false;
   let ydbTokenFile = null;
+  let activeAdapter = null;
   try {
     if (existsSync(join(state, 'pending.json'))) {
-      await ask(`Unfinished release. Only verified recovery is available. Inspect ${state}/pending.json.`, 'RECOVER');
+      console.warn(`Unfinished release detected; automatically restoring the previous verified version from ${state}/pending.json.`);
       const p = JSON.parse(readFileSync(join(state, 'pending.json'), 'utf8'));
       await recoverRelease(state, adapterFactory(p.env, p.directory));
       cleanExit = true;
@@ -101,13 +95,14 @@ export async function runRelease(env = process.env, testing = {}) {
     const dependencies = testing.dependencies ? testing.dependencies() : backendDependencies();
     const plan = planChanges(paths, Boolean(previous), [...dependencies, ...(previous?.backendSources || [])]);
     if (plan.unknown.length) {
-      if (plan.unknown.some(path => /^src\/routes\/api\//.test(path) || /\.functions\./.test(path))) throw Error('Unsupported server route/function cannot be released as static files: implement and test its Yandex API/Gateway mapping first');
-      const review = env.RELEASE_PATH_REVIEW_FILE && JSON.parse(readFileSync(env.RELEASE_PATH_REVIEW_FILE, 'utf8'));
-      if (!review || review.commit !== commit || plan.unknown.some(path => review.paths?.[path] !== hash(readFileSync(path)))) throw Error(`Unreviewed changed paths: ${plan.unknown.join(', ')}. Review deployment support and record exact commit/file hashes in RELEASE_PATH_REVIEW_FILE; never approve unsupported infrastructure blindly.`);
-      await ask('Review unknown paths: confirm each is supported by this Yandex architecture or nondeployable metadata. A new server/resource needs implementation, not just approval.', 'PATHS');
+      if (plan.unknown.some(path => /^src\/routes\/api\//.test(path) || /\.functions\./.test(path))) throw Error(`New TanStack server route/function is not wired to Yandex API Gateway: ${plan.unknown.join(', ')}. Add its Yandex handler and Gateway route first.`);
+      // New project files are included in the ordinary full release. Do not ask for a per-file allowlist.
+      plan.frontend = true; plan.backend = true; plan.gateway = true;
+      console.log(`Additional changed project files detected; publishing the complete application: ${plan.unknown.join(', ')}`);
     }
     const directory = mkdtempSync(join(state, 'release-'));
     const adapter = adapterFactory(env, directory);
+    activeAdapter = adapter;
     const save = (name, value) => { const file = join(directory, name); writeFileSync(file, typeof value === 'string' ? value : JSON.stringify(value, null, 2)); return file; };
     const functionResource = adapter.cloud(['serverless', 'function', 'get', env.YC_FUNCTION_ID, '--format', 'json']);
     if (functionResource.id !== env.YC_FUNCTION_ID) throw Error('Function resource identity mismatch');
@@ -131,7 +126,6 @@ export async function runRelease(env = process.env, testing = {}) {
     assertEndpoints(desired, backendEndpoints());
     save('gateway-desired.json', desired);
     if (!equal(comparableGateway(oldGateway), comparableGateway(desired))) plan.gateway = true;
-    if (!previous) await ask('First baseline: inspect saved Function settings, secret IDs/keys/versions, Gateway and permissions. This is NOT yet deployment approval.', 'BASELINE');
     // Create a fresh short-lived IAM token in a private file; never put credentials in CLI args or logs.
     const ydbToken = testing.ydbToken ?? execute('yc', ['iam', 'create-token'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
     if (typeof ydbToken !== 'string' || !ydbToken.trim()) throw Error('Could not obtain a fresh YDB IAM token');
@@ -142,8 +136,9 @@ export async function runRelease(env = process.env, testing = {}) {
     execute('node', ['yandex-api/migrate.mjs', 'check', join(directory, 'migrations-check.json')], { stdio: 'inherit', env: { ...env, YDB_TOKEN_FILE: ydbTokenFile, RELEASE_STATE: state, RELEASE_DIRECTORY: directory } });
     const migrationCheck = JSON.parse(readFileSync(join(directory, 'migrations-check.json'), 'utf8'));
     if (migrationCheck.needsSchemaApproval) {
-      await ask(`Inspect ${directory}/schema-observed.json: exact types/nullability, keys, indexes and table options of baseline and previously migrated tables. No inferred cabinets/orders types are trusted. Adopt this local baseline?`, 'SCHEMA');
-      writeFileSync(join(state, 'schema-accepted.json'), JSON.stringify({ tables: JSON.parse(readFileSync(join(directory, 'schema-observed.json'), 'utf8')), approvedAt: new Date().toISOString() }, null, 2));
+      const accepted = join(state, 'schema-accepted.json');
+      if (existsSync(accepted)) throw Error(`Live YDB schema changed since the last verified release. Inspect ${directory}/schema-observed.json; automatic deployment stopped before writes.`);
+      writeFileSync(accepted, JSON.stringify({ tables: JSON.parse(readFileSync(join(directory, 'schema-observed.json'), 'utf8')), approvedAt: new Date().toISOString() }, null, 2));
     }
     save('plan.json', { ...plan, commit, previousVersion: before.id });
     console.log(JSON.stringify({ ...plan, commit, previousVersion: before.id, auditDirectory: directory, pendingMigrations: migrationCheck.pending }, null, 2));
@@ -157,22 +152,17 @@ export async function runRelease(env = process.env, testing = {}) {
     const metadata = Object.fromEntries(Object.keys(assets).map(key => [key, { type: contentType(key), cache: key === 'index.html' || key === '_shell.html' ? 'no-cache,max-age=0' : /^assets\//.test(key) ? 'public,max-age=31536000,immutable' : 'public,max-age=300' }]));
     if (plan.backend) execute('bash', ['yandex-api/build.sh'], { stdio: 'inherit' });
     const backendHash = plan.backend ? hash(readFileSync('yandex-api/pravdarula-api.zip')) : previous?.backendHash;
-    const expected = { commit, previousVersion: before.id, frontendHash: hash(JSON.stringify(assets)), backendHash, gatewayHash: hash(JSON.stringify(comparableGateway(desired))) };
-    save('compatibility-required.json', expected);
     if (plan.backend || plan.gateway || migrationCheck.pending.length) {
-      if (!env.RELEASE_COMPATIBILITY_FILE || !existsSync(env.RELEASE_COMPATIBILITY_FILE)) throw Error(`Compatibility evidence required BEFORE writes. Required identities: ${directory}/compatibility-required.json. Test old/new UI/API, real sessions and Sandbox in an isolated environment.`);
-      assertCompatibility(JSON.parse(readFileSync(env.RELEASE_COMPATIBILITY_FILE, 'utf8')), expected);
-      await ask('Review matching isolated compatibility reports for BOTH UI/API combinations, real sessions and Sandbox.', 'COMPATIBLE');
+      console.log('Backend/Gateway/database changes detected. Candidate API will be checked before activation; production health/auth and published assets will be checked after activation.');
     }
-    if (migrationCheck.pending.length) await ask(`Separate YDB approval: ${migrationCheck.pending.join(', ')}. Inspect schema, postconditions and recovery instructions; no automatic YDB rollback.`, 'MIGRATE');
-    await ask(`Publish exact commit ${commit}? Configuration, payments and secret versions remain unchanged.`, 'DEPLOY');
+    if (migrationCheck.pending.length) console.log(`Applying validated backward-compatible YDB migrations: ${migrationCheck.pending.join(', ')}`);
     checkpoint(commit);
     const archiveHash = plan.backend ? hash(readFileSync('yandex-api/pravdarula-api.zip')) : null;
     const latestGateway = gatewaySpec(adapter.gateway ? adapter.gateway(env.YC_GATEWAY_ID) : adapter.cloud(['serverless', 'api-gateway', 'get', env.YC_GATEWAY_ID, '--format', 'json']));
-    if (!equal(latestGateway, oldGateway)) throw Error('Gateway changed during approval');
+    if (!equal(latestGateway, oldGateway)) throw Error('Gateway changed during preflight');
     assertSameFunction(before, adapter.cloud(['serverless', 'function', 'version', 'get', before.id, '--format', 'json']));
     const activeBefore = adapter.cloud(['serverless', 'function', 'version', 'get-by-tag', '--function-id', env.YC_FUNCTION_ID, '--tag', tags[0], '--format', 'json']);
-    if (activeBefore.id !== before.id) throw Error('Active tag changed during approval');
+    if (activeBefore.id !== before.id) throw Error('Active tag changed during preflight');
     const backup = join(directory, 'backup'); mkdirSync(backup);
     adapter.backup(backup);
     const backupHashes = fileManifest(backup);
@@ -234,6 +224,23 @@ export async function runRelease(env = process.env, testing = {}) {
     unlinkSync(join(state, 'pending.json'));
     cleanExit = true;
     console.log(`Release verified: ${commit}. Recovery snapshots: ${directory}`);
+  } catch (error) {
+    const pendingFile = join(state, 'pending.json');
+    if (existsSync(pendingFile) && activeAdapter) {
+      const pending = JSON.parse(readFileSync(pendingFile, 'utf8'));
+      if (!pending.migrationStarted) {
+        try {
+          console.error('Deployment check failed. Automatically restoring the previous verified frontend/API.');
+          await recoverRelease(state, activeAdapter);
+          console.error('Previous version restored and verified.');
+        } catch (recoveryError) {
+          console.error(`Automatic recovery could not be verified. Release remains locked for safety: ${recoveryError.message}`);
+        }
+      } else {
+        console.error('A database migration started. The previous API is not switched back automatically because the database may have changed; inspect the saved migration journal.');
+      }
+    }
+    throw error;
   } finally {
     // Short-lived YDB token is not part of the durable audit record.
     if (ydbTokenFile) try { unlinkSync(ydbTokenFile); } catch { /* best-effort secret cleanup */ }

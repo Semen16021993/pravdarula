@@ -3,10 +3,11 @@ set -euo pipefail
 umask 077
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
+# Make locally installed tools available regardless of how Terminal was opened.
+export PATH="$HOME/.bun/bin:$HOME/yandex-cloud/bin:$HOME/ydb/bin:$PATH"
 for tool in git node npm bun yc ydb curl zip; do
   command -v "$tool" >/dev/null || { echo "$tool required" >&2; exit 1; }
 done
-[[ -t 0 ]] || { echo 'Interactive terminal required; no writes allowed.' >&2; exit 1; }
 [[ "$(git branch --show-current)" == main ]] || { echo 'Deploy from main'; exit 1; }
 [[ -z "$(git status --porcelain)" ]] || { echo 'Commit local changes first'; exit 1; }
 node -e 'if (Number(process.versions.node.split(".")[0]) < 22) throw Error("Node.js 22+ required")'
@@ -26,5 +27,5 @@ if [[ -f package-lock.json ]]; then npm ci; else bun install --frozen-lockfile; 
 npm ci --prefix yandex-api
 npm test
 node --test scripts/*.test.mjs yandex-api/migration-engine.test.mjs yandex-api/schema-check.test.mjs
-# The same entry point offers RECOVER instead of deployment when pending.json exists.
+# One command: build, publish UI + API + validated migrations, verify, and auto-recover on failure.
 node scripts/release-runner.mjs
