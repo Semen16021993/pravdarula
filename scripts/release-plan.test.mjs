@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { planChanges, backendDependencies } from './release-plan.mjs';
+import { planChanges, backendDependencies, backendEndpoints, assertSourceBoundary } from './release-plan.mjs';
+import { parse } from 'yaml';
+import { readFileSync } from 'node:fs';
+import { assertEndpoints } from './release-safety.mjs';
 
 test('interface-only changes do not deploy Cloud Function or Gateway', () => {
   const p = planChanges(['src/components/constructor/Constructor.tsx', 'src/styles.css'], true);
@@ -32,3 +35,11 @@ test('transitive backend dependencies outside API select backend updates', () =>
 test('new Yandex endpoint always requests Gateway review', () => assert.equal(planChanges(['yandex-api/index.ts'], true).gateway, true));
 test('new server route cannot silently become a static-only release', () => assert.deepEqual(planChanges(['src/routes/api/public/new.ts'], true).unknown, ['src/routes/api/public/new.ts']));
 test('unknown release tooling is not implicitly trusted', () => assert.deepEqual(planChanges(['scripts/new-infrastructure.mjs'], true).unknown, ['scripts/new-infrastructure.mjs']));
+test('every actual Yandex handler endpoint, including POST form alias, has a Gateway route', () => {
+  const endpoints = backendEndpoints();
+  assert.ok(endpoints.includes('POST /api/cabinet/form'));
+  assertEndpoints(parse(readFileSync('yandex-api/api-gateway.yaml', 'utf8')), endpoints);
+});
+test('multiline literal API conditions are analyzed without missing methods', () => assert.deepEqual(backendEndpoints('if (\n method === "POST" &&\n path === "/api/new"\n) {}'), ['POST /api/new']));
+test('computed API paths require review instead of silently omitting endpoint', () => assert.throws(() => backendEndpoints('if (method === "POST" && path.startsWith("/api/new")) {}'), /Nonliteral/));
+test('a new server function under an ordinary frontend filename cannot silently deploy as a static asset', () => assert.throws(() => assertSourceBoundary(['src/lib/new-rule.ts'], () => 'import { createServerFn as backend } from "@tanstack/react-start";'), /cannot be deployed/));

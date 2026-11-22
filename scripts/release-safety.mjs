@@ -78,7 +78,7 @@ export function pinGateway(spec, tag) {
   return copy;
 }
 export function writeGateway(path, spec) { writeFileSync(path, stringify(spec)); }
-export function comparableGateway(spec) { return pinGateway(spec, '__VERSION__'); }
+export function comparableGateway(spec) { return stable(pinGateway(spec, '__VERSION__')); }
 export function assertEndpoints(spec, endpoints) {
   const routes = new Set(integrations(spec).filter(x => x.integration.type === 'cloud_functions').map(x => `${x.method} ${x.path}`));
   for (const endpoint of endpoints) if (!routes.has(endpoint)) throw Error(`API endpoint not routed by Gateway: ${endpoint}`);

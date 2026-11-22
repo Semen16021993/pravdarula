@@ -53,3 +53,11 @@ test('wrong recovery version blocks restoration', async () => {
   f.adapter.cloud = args => args.includes('get-by-tag') ? { id: 'wrong' } : original(args);
   try { await assert.rejects(recoverRelease(f.state, f.adapter), /does not resolve/); assert.equal(f.writes.some(x => x.startsWith('upload:')), false); } finally { f.cleanup(); }
 });
+test('recovery restores the old manifest even if a crash followed writing the new manifest', async () => {
+  const f = fixture();
+  const old = { commit: 'old', functionVersion: 'v1' };
+  const file = f.pending.directory + '/current-before.json';
+  writeFileSync(file, JSON.stringify(old)); f.pending.snapshotHashes[file] = hash(readFileSync(file));
+  writeFileSync(f.state + '/current.json', JSON.stringify({ commit: 'new', functionVersion: 'v2' })); savePending(f.state, f.pending);
+  try { await recoverRelease(f.state, f.adapter); assert.deepEqual(JSON.parse(readFileSync(f.state + '/current.json', 'utf8')), old); } finally { f.cleanup(); }
+});

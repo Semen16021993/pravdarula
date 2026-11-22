@@ -1,8 +1,20 @@
 import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
-import { join, dirname, normalize } from 'node:path';
+import { join, normalize } from 'node:path';
+import { buildSync } from '../yandex-api/node_modules/esbuild/lib/main.js';
+import ts from 'typescript';
 
 export const hash = (value) => createHash('sha256').update(value).digest('hex');
+export function assertSourceBoundary(paths, read = path => existsSync(path) ? readFileSync(path, 'utf8') : '') {
+  for (const path of paths.filter(p => /^src\/.*\.[cm]?[jt]sx?$/.test(p))) {
+    const tree = ts.createSourceFile(path, read(path), ts.ScriptTarget.Latest, true);
+    const visit = node => {
+      if (ts.isIdentifier(node) && node.text === 'createServerFn') throw Error(`TanStack server function cannot be deployed as a static Yandex asset: ${path}; implement its Yandex API/Gateway mapping first`);
+      ts.forEachChild(node, visit);
+    };
+    visit(tree);
+  }
+}
 export function planChanges(paths, hasBaseline, backendSources = []) {
   const plan = { frontend: !hasBaseline, backend: !hasBaseline, gateway: !hasBaseline, migrations: false, unknown: [], reasons: paths };
   for (const p of paths) {
@@ -10,6 +22,7 @@ export function planChanges(paths, hasBaseline, backendSources = []) {
     if (/^yandex-api\/migrations\//.test(p)) plan.migrations = true;
     else if (p === 'yandex-api/api-gateway.yaml') plan.gateway = true;
     else if (/^yandex-api\//.test(p)) { plan.backend = true; plan.gateway = true; }
+    else if (p === 'src/lib/payments.functions.ts') { plan.frontend = true; }
     else if (/^src\/(routes\/api\/|.*\.functions\.|server\.|start\.)/.test(p)) { plan.unknown.push(p); plan.frontend = plan.backend = plan.gateway = true; }
     else if (/^(src\/|public\/|vite)/.test(p)) {
       plan.frontend = true;
@@ -24,33 +37,44 @@ export function planChanges(paths, hasBaseline, backendSources = []) {
 
 /** Recursively track repository imports, including shared modules outside yandex-api. */
 export function backendDependencies(entry = 'yandex-api/index.ts') {
-  const found = new Set();
-  function walk(file) {
-    if (found.has(file) || !existsSync(file)) return;
-    found.add(file);
-    const text = readFileSync(file, 'utf8');
-    for (const match of text.matchAll(/(?:from\s*|import\s*\(\s*|import\s*)["']([^"']+)["']/g)) {
-      const spec = match[1];
-      if (!spec.startsWith('.') && !spec.startsWith('@/')) continue;
-      const base = normalize(spec.startsWith('@/') ? 'src/' + spec.slice(2) : join(dirname(file), spec));
-      const resolved = [base, ...['.ts', '.tsx', '.mjs', '.js', '/index.ts'].map((ext) => base + ext)].find((p) => existsSync(p) && statSync(p).isFile());
-      if (!resolved) throw new Error(`Unresolved backend import ${spec} in ${file}`);
-      walk(resolved);
-    }
+  const result = buildSync({ entryPoints: [entry], bundle: true, write: false, metafile: true, platform: 'node', target: 'node22', packages: 'external', alias: { '@': './src' }, logLevel: 'silent' });
+  const sources = Object.keys(result.metafile.inputs).map(p => normalize(p)).sort();
+  for (const file of sources) {
+    if (file.startsWith('..') || file.startsWith('/')) throw Error('Backend import outside repository requires review');
+    const source = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true);
+    const visit = node => {
+      if (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword || (ts.isIdentifier(node.expression) && node.expression.text === 'require')) && (!node.arguments[0] || !ts.isStringLiteral(node.arguments[0]))) throw Error(`Computed backend dependency requires review: ${file}`);
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
   }
-  walk(entry);
-  return [...found].sort();
+  return sources;
 }
 
 /** The API's current literal dispatch must be covered by Gateway, including method aliases. */
 export function backendEndpoints(source = readFileSync('yandex-api/index.ts', 'utf8')) {
   const endpoints = new Set();
-  for (const line of source.split('\n').filter(line => /^\s*if\s*\(/.test(line) && /\bpath\b/.test(line))) {
-    const methods = [...line.matchAll(/method\s*===\s*["']([A-Z]+)["']/g)].map(m => m[1]);
-    const paths = [...line.matchAll(/path\s*===\s*["']([^"']+)["']/g)].map(m => m[1]);
-    if (!methods.length || !paths.length) throw Error('Nonliteral API dispatcher requires reviewed endpoint inventory before release');
-    for (const method of methods) for (const path of paths) endpoints.add(`${method} ${path}`);
-  }
+  const tree = ts.createSourceFile('index.ts', source, ts.ScriptTarget.Latest, true);
+  const visit = node => {
+    if (ts.isIfStatement(node)) {
+      const methods = [], paths = []; let referencesPath = false;
+      const condition = part => {
+        if (ts.isIdentifier(part) && part.text === 'path') referencesPath = true;
+        if (ts.isBinaryExpression(part) && part.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken && ts.isIdentifier(part.left) && ts.isStringLiteral(part.right)) {
+          if (part.left.text === 'method') methods.push(part.right.text);
+          if (part.left.text === 'path') paths.push(part.right.text);
+        }
+        ts.forEachChild(part, condition);
+      };
+      condition(node.expression);
+      if (referencesPath) {
+        if (!methods.length || !paths.length) throw Error('Nonliteral API dispatcher requires reviewed endpoint inventory before release');
+        for (const method of methods) for (const path of paths) endpoints.add(`${method} ${path}`);
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(tree);
   if (!endpoints.size) throw Error('No verifiable API endpoints found');
   return [...endpoints].sort();
 }

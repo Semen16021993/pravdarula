@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync, unlinkSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, unlinkSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { hash, fileManifest } from './release-plan.mjs';
 import { assertSameFunction, assertGateway, gatewaySpec, gatewayTags, pinGateway, writeGateway, equal, comparableGateway } from './release-safety.mjs';
@@ -45,6 +45,14 @@ export async function recoverRelease(state, adapter) {
   if (!equal(live, pinned)) throw Error('Gateway recovery read-back mismatch');
   await adapter.verifyStatic(pending.backupHashes);
   await adapter.verifyPublic();
+  const savedManifest = join(pending.directory, 'current-before.json');
+  if (existsSync(savedManifest)) {
+    const previous = JSON.parse(readFileSync(savedManifest, 'utf8'));
+    if (previous) {
+      writeFileSync(join(state, 'restored-current.json'), JSON.stringify(previous, null, 2));
+      renameSync(join(state, 'restored-current.json'), join(state, 'current.json'));
+    } else if (existsSync(join(state, 'current.json'))) unlinkSync(join(state, 'current.json'));
+  }
   writeFileSync(join(pending.directory, 'recovered.json'), JSON.stringify({ ...pending, recoveredAt: new Date().toISOString() }, null, 2));
-  unlinkSync(file); // Only after verified recovery; the previous current.json remains unchanged.
+  unlinkSync(file); // Only after verified recovery and restoration of the previous manifest.
 }
