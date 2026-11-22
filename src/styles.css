@@ -152,7 +152,7 @@
 
 .onboarding-enter { animation: onboarding-enter 240ms ease-out; }
 
-.document-card { min-width: 0; perspective: 1200px; }
+.document-card { min-width: 0; perspective: 1200px; container-type: inline-size; }
 .document-card-turn { position: relative; transform-style: preserve-3d; transition: transform 360ms ease; }
 .document-card[data-flipped="true"] .document-card-turn { transform: rotateY(180deg); }
 .document-card-front, .document-card-back { backface-visibility: hidden; }
@@ -161,8 +161,12 @@
 .document-card-compact .document-card-front { min-height: 144px; padding: 1rem; }
 .document-card-compact .document-card-back { padding: .75rem 1rem; }
 .document-card-description { scrollbar-width: thin; scrollbar-color: var(--primary) var(--secondary); }
-@media (min-width: 768px) {
+@container (min-width: 38rem) {
   .document-card-front { flex-direction: row; align-items: center; padding: 2rem; }
+  .document-card-actions { flex-direction: column; align-items: flex-end; }
+}
+@container (min-width: 28rem) {
+  .document-card-compact .document-card-front { flex-direction: row; align-items: center; }
   .document-card-compact .document-card-front { padding: 1rem; }
 }
 
@@ -183,7 +187,7 @@ button:hover .document-card-hint, button:focus-visible .document-card-hint { ani
 .document-card[data-flipped="true"] .document-card-back { position: relative; inset: auto; }
 .document-card[data-flipped="true"] .document-card-front { position: absolute; inset: 0; }
 
-.wallet { max-width: 34rem; padding-bottom: 1rem; }
+.wallet { width: 100%; min-width: 0; max-width: 34rem; padding-bottom: 1rem; }
 .wallet-card { --tone-a: var(--chart-3); --tone-b: var(--heading); position: relative; margin-top: -2.4rem; padding: 1.1rem 1.25rem 2.6rem; border-radius: 1.1rem; color: var(--primary-foreground); box-shadow: 0 -6px 18px -8px color-mix(in oklab, var(--foreground) 45%, transparent); transition: margin .35s ease, transform .25s ease; background: linear-gradient(135deg, var(--tone-a), var(--tone-b)); }
 .wallet-card:first-child { margin-top: 0; }
 .wallet-card:hover { transform: translateY(-4px); }
@@ -197,7 +201,7 @@ button:hover .document-card-hint, button:focus-visible .document-card-hint { ani
 .wallet-card[data-open="true"] { margin-bottom: 2.8rem; transform: none; padding-bottom: 1.25rem; }
 .wallet-card[data-open="true"] + .wallet-card { margin-top: 0; }
 .wallet-card[data-open="true"] .wallet-body {
-  max-height: 20rem; opacity: 1; min-height: 9rem; display: block;
+  max-height: none; opacity: 1; min-height: 9rem; display: block;
   margin-top: 1.1rem;
   padding: 1.15rem 1.15rem 1.3rem;
   border: 1px solid color-mix(in oklab, var(--primary-foreground) 34%, transparent);
@@ -208,3 +212,29 @@ button:hover .document-card-hint, button:focus-visible .document-card-hint { ani
   color: var(--primary-foreground);
 }
 @media (prefers-reduced-motion: reduce) { .wallet-card, .wallet-body { transition: none; } }
+
+/* Fit actual content instead of concealing page overflow. */
+.app-shell { overflow-wrap: anywhere; }
+.app-shell main section, .app-shell .panel { min-width: 0; }
+.app-shell input { max-width: 100%; min-width: 0; }
+.app-shell button:not(.wallet-toggle) { max-width: 100%; }
+.wallet-card, .wallet-body { min-width: 0; }
+.wallet-card[data-open="true"] .wallet-chevron { transform: rotate(180deg); }
+
+@media (max-width: 639px) {
+  .app-shell .panel { padding: 1.25rem; }
+  .app-shell .choice { padding: 1rem; }
+  .app-shell button:not([role="checkbox"]), .app-shell a[class*="inline-flex"] {
+    min-height: 44px;
+  }
+  .app-shell button:not(.wallet-toggle):not([role="checkbox"]), .app-shell a[class*="inline-flex"] {
+    height: auto;
+    white-space: normal;
+  }
+  .app-shell input { height: 44px; font-size: 16px; }
+  .document-card-front { padding: 1.25rem; }
+  .document-card-back { padding: 1rem 1.25rem; }
+  .document-card-compact .document-card-front { padding: 1rem; }
+  .wallet-card { padding-left: 1rem; padding-right: 1rem; }
+  .wallet-card[data-open="true"] .wallet-body { padding: 1rem; }
+}

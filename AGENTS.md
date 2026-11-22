@@ -31,6 +31,7 @@ use the editor.
 
 - Keep the three-screen introduction in a separate presentation component before mounting the existing constructor; this preserves the order workflow and its saved state.
 - Use a shared DocumentCard with descriptions from a browser-safe catalog module wherever individual documents appear; this keeps flip behavior and fixed-size internal scrolling consistent without affecting purchase or download actions.
+- Scope responsive controls to app-shell, use zero-minimum content tracks and container queries for document layouts; nested documents must fit their available width rather than the viewport alone.
 - Personal cabinet: login (email one-time code) gates / before Onboarding; per-user form and purchases live in the cabinets table, localStorage is only a per-user cache — so documents can be re-downloaded on any device.
 - Frontend demo requires both the Preview build flag and this project's verified hostname after hydration; lazy demo imports are eliminated by the Yandex build's false flag so production cannot load mock users or purchases.
 - Production form defaults are empty and must never import Preview fixtures; user/server values alone populate real forms to prevent synthetic data being saved to YDB.

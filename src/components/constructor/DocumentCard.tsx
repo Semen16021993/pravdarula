@@ -24,13 +24,13 @@ export function DocumentCard({ id, children, compact = false, recommended = fals
               <span className="text-xs font-bold uppercase text-muted-foreground">{doc.kind === "kit" ? "Комплект образцов" : "DOCX с вашими данными"}</span>
             </div>}
             <h3 className={cn("font-bold", compact ? "text-sm" : "mt-1 text-lg")}>
-              <Button variant="ghost" className="h-auto w-full justify-start whitespace-normal rounded-md p-0 text-left font-serif text-inherit hover:bg-transparent hover:text-primary" aria-label={`Подробнее: ${doc.title}`} aria-expanded={flipped} aria-controls={descriptionId} onClick={() => setFlipped(true)}>
+              <Button variant="ghost" className="h-auto w-full min-w-0 items-start justify-start whitespace-normal rounded-md p-0 text-left font-serif text-inherit hover:bg-transparent hover:text-primary" aria-label={`Подробнее: ${doc.title}`} aria-expanded={flipped} aria-controls={descriptionId} onClick={() => setFlipped(true)}>
                 <span className="min-w-0">{doc.title}</span><Info className="document-card-hint shrink-0 text-primary size-5" />
               </Button>
             </h3>
             {!compact && <p className="mt-1 text-sm text-muted-foreground">{doc.purpose}</p>}
           </div>
-          {children && <div className="flex shrink-0 items-center gap-4 md:flex-col md:items-end">{children}</div>}
+          {children && <div className="document-card-actions flex shrink-0 flex-wrap items-center justify-between gap-3">{children}</div>}
         </div>
         <div className="document-card-back rounded-3xl border border-primary/40 bg-secondary" aria-hidden={!flipped} inert={!flipped}>
           <div className="flex shrink-0 items-center justify-between gap-2 border-b border-primary/20 pb-2">

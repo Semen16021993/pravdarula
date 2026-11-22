@@ -125,22 +125,22 @@ export function Constructor({ userId, email, preview: requestedPreview = false, 
   const back = () => idx > 0 && s.step !== "paid" && set({ step: steps[idx - 1]! });
 
   return (
-    <div className="min-h-screen">
-      <header className="mx-auto mt-4 flex max-w-6xl items-center justify-between rounded-3xl bg-card px-6 py-4 shadow-soft">
-        <button onClick={reset} className="text-left leading-none">
+    <div className="app-shell min-h-svh">
+      <header className="app-header mx-4 mt-4 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-3xl bg-card px-4 py-3 shadow-soft sm:mx-auto sm:flex sm:max-w-6xl sm:justify-between sm:px-6 sm:py-4">
+        <Button variant="ghost" onClick={reset} className="h-auto min-w-0 flex-col items-start gap-0 whitespace-normal p-0 text-left leading-tight hover:bg-transparent">
           <span className="block font-serif text-lg font-bold text-heading">Право Руля</span>
           <span className="text-xs text-muted-foreground">конструктор документов · ст. 12.27 ч. 2</span>
-        </button>
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant={s.step === "cabinet" ? "default" : "outline"} onClick={() => set({ step: "cabinet" })}><FolderOpen /> Мои документы{purchases.length ? ` (${purchases.length})` : ""}</Button>
+        </Button>
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+          <Button size="sm" className="h-11 w-11 p-0 sm:h-9 sm:w-auto sm:px-3" aria-label={`Мои документы${purchases.length ? ` (${purchases.length})` : ""}`} title="Мои документы" variant={s.step === "cabinet" ? "default" : "outline"} onClick={() => set({ step: "cabinet" })}><FolderOpen /><span className="hidden sm:inline">Мои документы{purchases.length ? ` (${purchases.length})` : ""}</span></Button>
           <Button asChild size="sm" variant="ghost" className="hidden md:inline-flex"><a href="tel:+79105086284">Помощь</a></Button>
-          <Button size="sm" variant="ghost" onClick={signOut} title={email} aria-label="Выйти"><LogOut /><span className="hidden sm:inline">Выйти</span></Button>
+          <Button size="sm" className="h-11 w-11 p-0 sm:h-9 sm:w-auto sm:px-3" variant="ghost" onClick={signOut} title={email} aria-label="Выйти"><LogOut /><span className="hidden sm:inline">Выйти</span></Button>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-10">
+      <main className="mx-auto min-w-0 max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
         {preview && <div className="mb-6 flex flex-wrap items-center gap-2 border-b border-border pb-4">
-          <span className="mr-2 text-sm text-muted-foreground">Preview · демонстрационный кабинет</span>
+          <span className="w-full text-sm text-muted-foreground sm:mr-2 sm:w-auto">Preview · демонстрационный кабинет</span>
           <Button variant="outline" size="sm" onClick={reset}>Новый заказ</Button>
           <Button variant="outline" size="sm" onClick={() => set({ mode: s.mode ?? "complex", stage: s.stage ?? 1, step: "form", consent: true })}>Анкета</Button>
           <Button variant="outline" size="sm" onClick={() => set({ mode: "complex", stage: s.stage ?? 1, step: "offer" })}>План действий</Button>
@@ -149,9 +149,9 @@ export function Constructor({ userId, email, preview: requestedPreview = false, 
         {s.step !== "mode" && s.step !== "cabinet" && (
           <div className="mb-6 flex items-center gap-4">
             {s.step !== "paid" && <Button variant="ghost" size="sm" onClick={back}><ArrowLeft /> Назад</Button>}
-            <div className="flex flex-1 gap-2">
+            <div className="flex min-w-0 flex-1 gap-2">
               {["Режим", "Стадия", "Анкета", s.mode === "complex" ? "Roadmap" : "Документы", "Готово"].map((l, i) => (
-                <div key={l} className="flex-1">
+                <div key={l} className="min-w-0 flex-1">
                   <div className={`h-1.5 rounded-full ${i <= idx ? "bg-primary" : "bg-border"}`} />
                   <span className="mt-1 hidden text-xs text-muted-foreground sm:block">{l}</span>
                 </div>
@@ -161,7 +161,7 @@ export function Constructor({ userId, email, preview: requestedPreview = false, 
         )}
 
         {checking && (
-          <div className="panel mb-6 flex items-center gap-3">
+          <div className="panel mb-6 flex flex-wrap items-center gap-3 [&>svg]:shrink-0">
             {checking === "wait" ? <><Loader2 className="animate-spin" /> Проверяем оплату… Обычно это занимает несколько секунд.</> :
               <><X className="text-destructive" /> Оплата не подтверждена, документы не открыты. Можно попробовать оплатить ещё раз. <Button size="sm" variant="ghost" onClick={() => setChecking(null)}>Закрыть</Button></>}
           </div>
@@ -183,11 +183,11 @@ type P = { s: State; set: (p: Partial<State>) => void; onPaid?: ((p: Purchase) =
 function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
   return (
     <section>
-      <h1 className="max-w-none whitespace-nowrap text-3xl font-bold leading-tight md:text-5xl">Документы для ГИБДД и суда</h1>
+      <h1 className="text-3xl font-bold leading-tight md:text-4xl lg:text-5xl">Документы для ГИБДД и суда</h1>
       <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
         Для водителей, которым грозит ч. 2 ст. 12.27 КоАП РФ. Выберите стадию, заполните анкету один раз — получите готовые документы с вашими данными, соответствующие стадии дела и инстанции рассмотрения.
       </p>
-      <div className="mt-10 grid gap-6 md:grid-cols-2">
+      <div className="mt-6 grid gap-4 md:mt-10 md:grid-cols-2 md:gap-6">
         <div className="panel flex flex-col">
           <FileText className="size-9 text-primary" />
           <h2 className="mt-4 text-2xl font-bold">Отдельные документы</h2>
@@ -239,9 +239,9 @@ function StageStep({ s, set }: P) {
 
 function Field({ id, label, hint, value, onChange, type = "text", placeholder }: { id: string; label: string; hint: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string }) {
   return (
-    <div>
+    <div className="min-w-0">
       <Label htmlFor={id} className="font-bold text-heading">{label}</Label>
-      <Input id={id} type={type} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="mt-1.5 bg-background" />
+      <Input id={id} type={type} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="mt-1.5 min-w-0 bg-background" />
       <p className="field-hint">{hint}</p>
     </div>
   );
@@ -258,12 +258,12 @@ function FormStep({ s, set }: P) {
 
       <div className="panel mt-6">
         <h2 className="text-xl font-bold">О вас</h2>
-        <div className="mt-4 grid gap-5 md:grid-cols-2">
+        <div className="mt-4 grid gap-5 sm:grid-cols-2">
           <Field id="fio" label="ФИО" hint="Полностью, как в паспорте." value={f.fio} onChange={up("fio")} />
           <Field id="phone" label="Телефон" hint="Российский номер." placeholder="+7 (___) ___-__-__" value={f.phone} onChange={(x) => up("phone")(formatPhone(x))} type="tel" />
           <Field id="email" label="Электронная почта" hint="Сюда придут документы." type="email" value={f.email} onChange={up("email")} />
           <Field id="birthYear" label="Год рождения" hint="Четыре цифры, например 1985." value={f.birthYear} onChange={(x) => up("birthYear")(x.replace(/\D/g, "").slice(0, 4))} />
-          <div className="md:col-span-2"><Field id="address" label="Фактический адрес" hint="Где вы живёте сейчас, с индексом." value={f.address} onChange={up("address")} /></div>
+          <div className="sm:col-span-2"><Field id="address" label="Фактический адрес" hint="Где вы живёте сейчас, с индексом." value={f.address} onChange={up("address")} /></div>
           <Field id="carNumber" label="Госномер вашего автомобиля" hint="Например, А123ВС77." value={f.carNumber} onChange={(x) => up("carNumber")(x.toUpperCase())} />
           {needPassport && <Field id="passport" label="Паспорт (для расписки)" hint="Серия, номер, кем и когда выдан. Нужно только для расписки." value={f.passport} onChange={up("passport")} />}
         </div>
@@ -271,18 +271,18 @@ function FormStep({ s, set }: P) {
 
       <div className="panel mt-6">
         <h2 className="text-xl font-bold">О ДТП</h2>
-        <div className="mt-4 grid gap-5 md:grid-cols-2">
+        <div className="mt-4 grid gap-5 sm:grid-cols-2">
           <Field id="accidentDate" label="Дата ДТП" hint="Выберите дату." type="date" value={f.accidentDate} onChange={up("accidentDate")} />
           <Field id="accidentTime" label="Примерное время" hint="Можно примерно: «около 18:30»." value={f.accidentTime} onChange={up("accidentTime")} />
-          <div className="md:col-span-2"><Field id="accidentPlace" label="Место ДТП" hint="Адрес или описание: «г. Москва, ул. Ленина, 5, парковка ТЦ»" value={f.accidentPlace} onChange={up("accidentPlace")} /></div>
-          <div className="md:col-span-2"><Field id="victim" label="Потерпевший" hint="ФИО или только фамилия — этого достаточно. Если не знаете фамилию в поле ввода напишите: потерпевший" value={f.victim} onChange={up("victim")} /></div>
+          <div className="sm:col-span-2"><Field id="accidentPlace" label="Место ДТП" hint="Адрес или описание: «г. Москва, ул. Ленина, 5, парковка ТЦ»" value={f.accidentPlace} onChange={up("accidentPlace")} /></div>
+          <div className="sm:col-span-2"><Field id="victim" label="Потерпевший" hint="ФИО или только фамилия — этого достаточно. Если не знаете фамилию в поле ввода напишите: потерпевший" value={f.victim} onChange={up("victim")} /></div>
         </div>
       </div>
 
       <div className="panel mt-6">
         <h2 className="text-xl font-bold">Куда подавать</h2>
         <p className="mt-1 text-sm text-muted-foreground">Найдите подразделение ГИБДД и суд в интернете. Мы не подставляем адреса сами.</p>
-        <div className="mt-4 grid gap-5 md:grid-cols-2">
+        <div className="mt-4 grid gap-5 sm:grid-cols-2">
           <Field id="gibddName" label="Подразделение ГИБДД" hint="Например: ОБ ДПС ГИБДД УМВД по г. Иваново." value={f.gibddName} onChange={up("gibddName")} />
           <Field id="gibddAddress" label="Адрес ГИБДД" hint="Индекс, город, улица, дом." placeholder="153000, г. Иваново, ул. ..., д. ..." value={f.gibddAddress} onChange={up("gibddAddress")} />
           <Field id="courtName" label="Суд" hint="Название суда. Если не знаете — оставьте пустым." value={f.courtName} onChange={up("courtName")} />
@@ -291,7 +291,7 @@ function FormStep({ s, set }: P) {
       </div>
 
       <label className="mt-6 flex items-start gap-3 text-sm">
-        <Checkbox checked={s.consent} onCheckedChange={(c) => set({ consent: c === true })} className="mt-0.5" />
+        <Checkbox checked={s.consent} onCheckedChange={(c) => set({ consent: c === true })} className="mt-0.5 shrink-0" />
         <span>Даю <a className="text-primary underline" href="#" onClick={(e) => e.preventDefault()}>согласие на обработку персональных данных</a> и принимаю <a className="text-primary underline" href="#" onClick={(e) => e.preventDefault()}>политику обработки</a>.</span>
       </label>
       <Button className="mt-6" size="lg" disabled={!s.consent} onClick={() => set({ step: "offer" })}>
@@ -340,7 +340,7 @@ function CatalogStep({ s, set, onPaid, preview }: P) {
     <section>
       <h1 className="text-3xl font-bold md:text-4xl">Документы для стадии {stage}</h1>
       <p className="mt-2 text-muted-foreground">Выберите один или несколько — оплата одним платежом.</p>
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-4">
           {docsForStage(stage).map((d) => {
             const inCart = s.cart.includes(d.id);
@@ -389,12 +389,12 @@ function RoadmapView({ stage, locked, onDoc }: { stage: Stage; locked: boolean; 
           <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-muted-foreground">
             Стадия {g.stage} · {STAGES.find((x) => x.id === g.stage)?.short}
           </h2>
-          <ol className="relative space-y-6 border-l-2 border-primary/30 pl-8">
+          <ol className="relative space-y-6 border-l-2 border-primary/30 pl-5 sm:pl-8">
             {g.steps.map((st, i) => {
               n += 1;
               return (
-                <li key={i} className="relative">
-                  <span className="absolute -left-[3.05rem] flex size-9 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground">{n}</span>
+                <li key={i} className="relative min-w-0">
+                  <span className="absolute -left-[2.2rem] flex size-7 sm:-left-[3.05rem] sm:size-9 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground">{n}</span>
                   <div className="panel">
                     <span className="text-xs font-bold uppercase tracking-wide text-primary">{st.when}</span>
                     <h3 className="mt-1 text-xl font-bold">{st.title}</h3>
@@ -427,7 +427,7 @@ function ComplexStep({ s, set, onPaid, preview }: P) {
     <section>
       <h1 className="text-3xl font-bold md:text-4xl">Порядок действий{"\u00a0"}</h1>
       <p className="mt-2 text-muted-foreground">Документы и ДЕТАЛЬНАЯ ИНСТРУКЦИЯ откроются после оплаты комплекса.</p>
-      <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_340px]">
+      <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_340px]">
         <RoadmapView stage={stage} locked />
         <div>
           <div className="panel mb-4">
@@ -458,7 +458,7 @@ function ZipAllButton({ ids, form, instruction, name }: { ids: string[]; form: F
     }
   };
   return (
-    <Button size="lg" variant="outline" disabled={busy} onClick={go}>
+    <Button size="lg" className="w-full sm:w-auto" variant="outline" disabled={busy} onClick={go}>
       {busy ? <Loader2 className="animate-spin" /> : <FolderDown />}
       {busy ? "Собираю архив…" : "Скачать всё одним архивом"}
     </Button>
@@ -475,7 +475,7 @@ function PaidStep({ s, onReset }: { s: State; onReset: () => void }) {
       <p className="mt-2 text-muted-foreground">Поля в квадратных скобках заполните от руки перед подачей.</p>
 
       {s.mode === "complex" ? (
-        <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_340px]">
+        <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_340px]">
           <FileCabinet sections={[{ docs: complexDocs(s.stage!) }]} onDocx={get} onPdf={pdf} />
           <div className="panel h-fit">
             <h3 className="text-lg font-bold">Письменная инструкция</h3>
@@ -511,7 +511,7 @@ function CabinetStep({ form, email, purchases, onMore }: { form: FormData; email
   const list = [...purchases].reverse();
   return (
     <section>
-      <span className="chip">Личный кабинет · {email}</span>
+      <span className="chip max-w-full whitespace-normal break-all">Личный кабинет · {email}</span>
       <h1 className="mt-3 text-3xl font-bold md:text-4xl">Мои документы</h1>
       <p className="mt-2 text-muted-foreground">Все купленные документы. Скачивайте заново сколько угодно раз — в них подставляются актуальные данные вашей анкеты.</p>
       {list.length === 0 ? (
@@ -527,7 +527,7 @@ function CabinetStep({ form, email, purchases, onMore }: { form: FormData; email
                 {p.mode === "complex" ? "Комплекс" : "Документы"} · стадия {p.stage}
                 <span className="ml-2 text-sm font-normal text-muted-foreground">от {new Date(p.at).toLocaleDateString("ru-RU")}</span>
               </h2>
-              <div className="mt-4 grid gap-6 lg:grid-cols-[1fr_340px]">
+              <div className="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_340px]">
                 <FileCabinet
                   sections={[{ docs: p.mode === "complex" ? complexDocs(p.stage) : p.docs }]}
                   onDocx={get} onPdf={pdf}

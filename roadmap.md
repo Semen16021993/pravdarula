@@ -1,3 +1,7 @@
+# Responsive screens
+- [x] Adapt login, introduction, constructor, cart, payment result and cabinet for phones, tablets and desktop widths.
+- [x] Verify all stages and both purchase modes: 378 browser checks at widths 320–2560px without overflow or runtime errors; DOCX/PDF/ZIP downloads passed. Both login screens additionally checked with intercepted local responses at seven sizes. All 13 existing frontend tests passed; no production deployment or live auth/payment checks.
+
 # Unified Yandex release
 - [x] Harden full Function configuration/secret preservation and pinned API activation.
 - [x] Add fail-closed pending release handling and locally rehearsed static/Function/Gateway/manifest recovery, including six release-failure stages.

@@ -57,7 +57,7 @@ export function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-10">
+    <div className="app-shell flex min-h-svh items-center justify-center px-4 py-6 sm:py-10">
       <div className="panel w-full max-w-md">
         <span className="block font-serif text-2xl font-bold text-heading">Право Руля</span>
         <span className="text-xs text-muted-foreground">личный кабинет · ст. 12.27 ч. 2</span>
@@ -124,9 +124,9 @@ export function Login() {
             >
               {busy ? "Проверяем…" : "Войти"}
             </Button>
-            <button
+            <Button variant="link"
               type="button"
-              className="mt-3 flex items-center gap-1 text-sm text-muted-foreground underline"
+              className="mt-3 h-auto w-full gap-1 whitespace-normal px-0 text-sm text-muted-foreground underline"
               onClick={() => {
                 setSent(false);
                 setCode("");
@@ -134,7 +134,7 @@ export function Login() {
               }}
             >
               <ArrowLeft className="size-4" /> Изменить адрес / запросить новый код
-            </button>
+            </Button>
           </form>
         )}
       </div>
