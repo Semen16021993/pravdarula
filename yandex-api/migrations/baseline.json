@@ -1,0 +1,10 @@
+{
+  "description": "Existing Yandex schema: validate required columns read-only before explicitly adopting migration journal.",
+  "tables": {
+    "users": ["email", "user_id", "created_at"],
+    "auth_codes": ["email", "code_hash", "expires_at", "attempts", "sent_at"],
+    "auth_sessions": ["token_hash", "user_id", "email", "expires_at", "created_at"],
+    "cabinets": ["user_id", "form", "purchases", "updated_at"],
+    "orders": ["id", "user_id", "mode", "stage", "docs", "amount_kopecks", "status", "created_at", "paid_at"]
+  }
+}

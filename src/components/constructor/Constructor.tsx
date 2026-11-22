@@ -12,8 +12,7 @@ import {
 import { DocumentCard } from "./DocumentCard";
 import { checkPayment, createPayment } from "@/lib/payments.functions";
 import { FileCabinet } from "./FileCabinet";
-import { buildDoc, buildInstruction, demoForm, download, downloadPdf, downloadZip, emptyForm, type FormData } from "@/lib/docgen";
-import { loadPreviewCabinet, savePreviewCabinet, previewPurchase } from "@/lib/preview-cabinet";
+import { buildDoc, buildInstruction, download, downloadPdf, downloadZip, emptyForm, type FormData } from "@/lib/docgen";
 
 type Step = "mode" | "stage" | "form" | "offer" | "paid" | "cabinet";
 type OrderStatus = "draft" | "pending" | "paid" | "failed";
@@ -42,7 +41,8 @@ function formatPhone(raw: string) {
 
 const filled = (o: object) => Object.fromEntries(Object.entries(o).filter(([, v]) => String(v ?? "").trim()));
 
-export function Constructor({ userId, email, preview = false, onIntroduction }: { userId: string; email: string; preview?: boolean; onIntroduction?: () => void }) {
+export function Constructor({ userId, email, preview: requestedPreview = false, onIntroduction }: { userId: string; email: string; preview?: boolean; onIntroduction?: () => void }) {
+  const preview = import.meta.env.VITE_PREVIEW_DEMO === "true" && requestedPreview;
   const [s, setS] = useState<State>(initial);
   const [loaded, setLoaded] = useState(false);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
@@ -53,26 +53,28 @@ export function Constructor({ userId, email, preview = false, onIntroduction }: 
       const raw = localStorage.getItem(key);
       if (raw) saved = { ...initial, ...JSON.parse(raw) };
     } catch { /* ignore */ }
-    if (preview) {
-      const cab = loadPreviewCabinet();
-      setPurchases(cab.purchases);
-      setS({ ...saved, step: "cabinet", form: { ...demoForm, ...filled(cab.form) } as FormData });
-      setLoaded(true);
+    if (import.meta.env.VITE_PREVIEW_DEMO === "true" && preview) {
+      void import("@/lib/preview-cabinet").then(({ loadPreviewCabinet, demoForm }) => {
+        const cab = loadPreviewCabinet();
+        setPurchases(cab.purchases);
+        setS({ ...saved, step: "cabinet", form: { ...demoForm, ...filled(cab.form) } as FormData });
+        setLoaded(true);
+      });
       return;
     }
     loadCabinet(userId).then((cab) => {
       setPurchases(cab.purchases);
-      // Анкета из кабинета важнее локальной; демо-данные — во все оставшиеся пустые поля.
-      const form = { ...demoForm, ...filled(saved.form), ...filled(cab.form) } as FormData;
+      // Real empty fields stay empty; server cabinet values take precedence.
+      const form = { ...emptyForm, ...filled(saved.form), ...filled(cab.form) } as FormData;
       setS({ ...saved, form });
       setLoaded(true);
-    }).catch(() => { setS({ ...saved, form: { ...demoForm, ...filled(saved.form) } as FormData }); setLoaded(true); });
+    }).catch(() => { setS({ ...saved, form: { ...emptyForm, ...filled(saved.form) } as FormData }); setLoaded(true); });
   }, [userId, preview]);
   useEffect(() => { if (loaded) localStorage.setItem(key, JSON.stringify(s)); }, [s, loaded]);
   useEffect(() => {
     if (!loaded) return;
-    if (preview) {
-      savePreviewCabinet({ form: s.form, purchases });
+    if (import.meta.env.VITE_PREVIEW_DEMO === "true" && preview) {
+      void import("@/lib/preview-cabinet").then(({ savePreviewCabinet }) => savePreviewCabinet({ form: s.form, purchases }));
       return;
     }
     const t = setTimeout(() => { saveForm(userId, s.form); }, 800);
@@ -115,7 +117,7 @@ export function Constructor({ userId, email, preview = false, onIntroduction }: 
   useEffect(() => { window.scrollTo({ top: 0, behavior: "smooth" }); }, [s.step]);
 
   const set = (p: Partial<State>) => setS((x) => ({ ...x, ...p }));
-  const reset = () => setS((x) => ({ ...initial, form: { ...demoForm, ...filled(x.form) } as FormData }));
+  const reset = () => setS((x) => ({ ...initial, form: { ...emptyForm, ...filled(x.form) } as FormData }));
 
   const steps: Step[] = ["mode", "stage", "form", "offer", "paid"];
   if (!loaded) return <div className="min-h-screen" />;
@@ -303,7 +305,8 @@ function PayBox({ total, items, s, set, preview, onPaid }: P & { total: number; 
   const [err, setErr] = useState("");
   const pay = async () => {
     if (!s.mode || !s.stage || !items.length) return;
-    if (preview) {
+    if (import.meta.env.VITE_PREVIEW_DEMO === "true" && preview) {
+      const { previewPurchase } = await import("@/lib/preview-cabinet");
       await onPaid?.(previewPurchase(s.mode, s.stage, items));
       set({ purchased: [...items], cart: [], status: "paid", step: "paid" });
       return;

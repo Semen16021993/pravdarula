@@ -1,8 +1,18 @@
 import { complexDocs, type Mode, type Stage } from "./catalog";
-import { demoForm } from "./docgen";
+import type { FormData } from "./docgen";
 import type { Cabinet, Purchase } from "./cabinet";
 
 const KEY = "pravo-rulya-preview-cabinet-v1";
+export const PREVIEW_USER = { id: "preview-demo-user", email: "demo@example.test" };
+export const demoForm: FormData = {
+  fio: "Иванов Иван Иванович", phone: "+7 (900) 123-45-67", email: PREVIEW_USER.email,
+  address: "125009, г. Москва, ул. Тверская, д. 1, кв. 10", birthYear: "1985",
+  carNumber: "А123БВ777", accidentDate: "2026-10-05", accidentPlace: "г. Москва, ул. Ленина, 5, парковка ТЦ",
+  accidentTime: "18:30", victim: "Петров Пётр Петрович",
+  gibddName: "ОГИБДД ОМВД России по району Арбат г. Москвы", gibddAddress: "119019, г. Москва, ул. Воздвиженка, д. 10",
+  courtName: "Тверской районный суд г. Москвы", courtAddress: "125009, г. Москва, ул. Тверская, д. 7",
+  passport: "4500 123456, выдан ОМВД России по району Арбат г. Москвы 10.03.2010",
+};
 
 export function loadPreviewCabinet(): Cabinet {
   try {

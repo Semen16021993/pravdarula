@@ -19,5 +19,3 @@ export function isProjectPreview(hostname: string): boolean {
     return labels.length === 2 && new RegExp(`^live--${PROJECT_ID}(?:-thr_[a-z0-9]+)?$`).test(first);
   });
 }
-
-export const PREVIEW_USER = { id: "preview-demo-user", email: "demo@example.test" };

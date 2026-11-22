@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Constructor } from "@/components/constructor/Constructor";
 import { Onboarding } from "@/components/constructor/Onboarding";
 import { Login } from "@/components/constructor/Login";
-import { isProjectPreview, PREVIEW_USER } from "@/lib/preview-mode";
+import { isProjectPreview } from "@/lib/preview-mode";
 
 type CurrentUser = { id: string; email: string };
 
@@ -27,13 +27,16 @@ function DocumentEntry() {
   const [preview, setPreview] = useState(false);
 
   useEffect(() => {
-    if (isProjectPreview(window.location.hostname)) {
-      setPreview(true);
-      setUser(PREVIEW_USER);
-      setStarted(true);
-      return;
-    }
     let active = true;
+    if (import.meta.env.VITE_PREVIEW_DEMO === "true" && isProjectPreview(window.location.hostname)) {
+      void import("@/lib/preview-cabinet").then(({ PREVIEW_USER }) => {
+        if (!active) return;
+        setPreview(true);
+        setUser(PREVIEW_USER);
+        setStarted(true);
+      });
+      return () => { active = false; };
+    }
     fetch("/api/auth/me", { credentials: "same-origin", cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) throw new Error("Не удалось проверить авторизацию.");
