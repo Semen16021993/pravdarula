@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, mkdtempSync, unlinkSync, renameSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { planChanges, parseGitPaths, backendDependencies, backendEndpoints, assertSourceBoundary, hash, assertProductionAssets, fileManifest } from './release-plan.mjs';
@@ -9,7 +9,12 @@ import { contentType, savePending, recoverRelease } from './release-recovery.mjs
 const git = args => execFileSync('git', args, { encoding: 'utf8' }).trim();
 export function makeAdapter(env, directory) {
   const command = (tool, args, options = {}) => execFileSync(tool, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 180000, ...options });
-  const cloud = args => JSON.parse(command('yc', [...args, '--retry', '0', '--no-cli-auto-prompt']));
+  const cloud = args => {
+    const output = command('yc', [...args, '--retry', '0', '--no-cli-auto-prompt']).trim();
+    return output ? JSON.parse(output) : {};
+  };
+  const storageUrl = key => 'https://storage.yandexcloud.net/' + encodeURIComponent(env.YC_BUCKET) + '/' + key.split('/').map(encodeURIComponent).join('/');
+  const download = (address, file) => command('curl', ['--fail', '--silent', '--show-error', '--retry', '2', '--max-time', '60', '--output', file, address]);
   const gateway = id => {
     const resource = cloud(['serverless', 'api-gateway', 'get', id, '--format', 'json']);
     const openapi_spec = command('yc', ['serverless', 'api-gateway', 'get-spec', '--id', id]);
@@ -20,7 +25,23 @@ export function makeAdapter(env, directory) {
   return {
     cloud,
     gateway,
-    backup: dest => command('yc', ['storage', 's3', 'cp', '--recursive', `s3://${env.YC_BUCKET}/`, dest]),
+    backup: dest => {
+      let token;
+      do {
+        const args = ['storage', 's3api', 'list-objects-v2', '--bucket', env.YC_BUCKET, '--format', 'json'];
+        if (token) args.push('--continuation-token', token);
+        const page = cloud(args);
+        for (const { key, size } of page.contents || []) {
+          if (key.split('/').some(part => !part || part === '.' || part === '..')) throw Error('Unsupported storage key in backup');
+          const path = join(dest, key);
+          mkdirSync(dirname(path), { recursive: true });
+          download(storageUrl(key), path);
+          if (readFileSync(path).length !== Number(size)) throw Error('Incomplete backup: ' + key);
+        }
+        token = page.next_continuation_token;
+        if (page.is_truncated && !token) throw Error('Incomplete bucket listing');
+      } while (token);
+    },
     metadata: key => {
       const head = cloud(['storage', 's3api', 'head-object', '--bucket', env.YC_BUCKET, '--key', key, '--format', 'json']);
       const field = name => head[name] ?? head[name[0].toLowerCase() + name.slice(1)] ?? head[name.replace(/[A-Z]/g, (c, i) => (i ? '_' : '') + c.toLowerCase())];
@@ -38,7 +59,9 @@ export function makeAdapter(env, directory) {
     verifyStatic: async hashes => {
       for (const [key, checksum] of Object.entries(hashes)) {
         const file = join(directory, 'remote-check');
-        readPublic(key, file);
+        // Nested prerendered pages are stored in the bucket. The Gateway exposes the SPA at /.
+        if (key.includes('/') && !/^(assets|fonts)\/[^/]+$/.test(key)) download(storageUrl(key), file);
+        else readPublic(key, file);
         if (hash(readFileSync(file)) !== checksum) throw Error(`Published static hash mismatch: ${key}; stop and recover`);
       }
     },
@@ -166,6 +189,7 @@ export async function runRelease(env = process.env, testing = {}) {
     const backup = join(directory, 'backup'); mkdirSync(backup);
     adapter.backup(backup);
     const backupHashes = fileManifest(backup);
+    if (!backupHashes['index.html']) throw Error('Backup has no production index.html; stopped before cloud writes');
     const staticMetadata = Object.fromEntries(Object.keys(backupHashes).map(key => [key, adapter.metadata(key)]));
     await adapter.verifyStatic(backupHashes);
     const previousTag = `release-${before.id}`;
