@@ -68,7 +68,7 @@ export function assertGateway(spec, env) {
   for (const { integration: i } of all) {
     if (!i || !['object_storage', 'cloud_functions'].includes(i.type)) throw Error('Unknown Gateway integration; explicit review required');
     if (i.type === 'object_storage' && i.bucket !== env.YC_BUCKET) throw Error('Gateway bucket mismatch');
-    if (i.type === 'cloud_functions' && (i.function_id !== env.YC_FUNCTION_ID || i.service_account_id !== env.YC_RUNTIME_SA_ID || !i.tag)) throw Error('Gateway Function/SA/tag mismatch');
+    if (i.type === 'cloud_functions' && (i.function_id !== env.YC_FUNCTION_ID || i.service_account_id !== env.YC_GATEWAY_SA_ID || !i.tag)) throw Error('Gateway Function/SA/tag mismatch');
   }
 }
 export function gatewayTags(spec) { return [...new Set(integrations(spec).filter(x => x.integration.type === 'cloud_functions').map(x => x.integration.tag))]; }
@@ -77,8 +77,18 @@ export function pinGateway(spec, tag) {
   for (const { integration: i } of integrations(copy)) if (i.type === 'cloud_functions') i.tag = tag;
   return copy;
 }
-export function writeGateway(path, spec) { writeFileSync(path, stringify(spec)); }
-export function comparableGateway(spec) { return stable(pinGateway(spec, '__VERSION__')); }
+export function writeGateway(path, spec) {
+  const deployable = structuredClone(spec);
+  // Yandex returns generated public server URLs in get-spec; they are output metadata, not editable spec input.
+  delete deployable.servers;
+  writeFileSync(path, stringify(deployable));
+}
+export function comparableGateway(spec) {
+  const comparable = structuredClone(spec);
+  // Ignore Yandex-generated domain URLs when comparing the authored OpenAPI configuration.
+  delete comparable.servers;
+  return stable(pinGateway(comparable, '__VERSION__'));
+}
 export function assertEndpoints(spec, endpoints) {
   const routes = new Set(integrations(spec).filter(x => x.integration.type === 'cloud_functions').map(x => `${x.method} ${x.path}`));
   for (const endpoint of endpoints) if (!routes.has(endpoint)) throw Error(`API endpoint not routed by Gateway: ${endpoint}`);

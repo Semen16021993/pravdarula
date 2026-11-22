@@ -1,9 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { functionConfig, verifyFunction, assertSameFunction, candidateArgs, pinGateway, gatewayTags, assertEndpoints, assertPendingClear, assertCompatibility } from './release-safety.mjs';
-const env = { YC_FUNCTION_ID: 'fn', YC_RUNTIME_SA_ID: 'sa', YC_AUTH_SECRET_ID: 'auth', YC_PAY_SECRET_ID: 'pay', APP_BASE_URL: 'https://pravdarula.ru', YDB_CONNECTION_STRING: 'test-db' };
+import { functionConfig, verifyFunction, assertSameFunction, candidateArgs, pinGateway, gatewayTags, assertEndpoints, assertPendingClear, assertCompatibility, assertGateway, gatewaySpec, comparableGateway, writeGateway } from './release-safety.mjs';
+import { parse } from 'yaml';
+const env = { YC_FUNCTION_ID: 'fn', YC_RUNTIME_SA_ID: 'sa', YC_GATEWAY_SA_ID: 'gateway-sa', YC_AUTH_SECRET_ID: 'auth', YC_PAY_SECRET_ID: 'pay', APP_BASE_URL: 'https://pravdarula.ru', YDB_CONNECTION_STRING: 'test-db' };
 const version = { id: 'v1', function_id: 'fn', runtime: 'nodejs22', entrypoint: 'index.handler', resources: { memory: '268435456' }, execution_timeout: '30s', service_account_id: 'sa', environment: { APP_BASE_URL: env.APP_BASE_URL, YDB_CONNECTION_STRING: 'test-db', YANDEX_PAY_ENV: 'sandbox', EXTRA: 'preserved' }, secrets: [ { id: 'auth', key: 'AUTH_SECRET', version_id: 'a1', environment_variable: 'AUTH_SECRET' }, { id: 'pay', key: 'YANDEX_PAY_SANDBOX_API_KEY', version_id: 'p1', environment_variable: 'YANDEX_PAY_SANDBOX_API_KEY' } ], concurrency: '2', metadata_options: { aws_v1_http_endpoint: 'DISABLED' } };
 test('clones full live version instead of hardcoded limits/environment/secret versions', () => {
   assert.equal(verifyFunction(version, env).environment.EXTRA, 'preserved');
@@ -31,3 +32,27 @@ test('pending release prevents a subsequent deployment', () => {
   try { assertPendingClear(d); writeFileSync(d + '/pending.json', '{}'); assert.throws(() => assertPendingClear(d), /Unfinished/); } finally { rmSync(d, { recursive: true }); }
 });
 test('compatibility evidence fails if any required pair has no actual report', () => assert.throws(() => assertCompatibility({ commit: 'c', previousVersion: 'v', frontendHash: 'f', backendHash: 'b', gatewayHash: 'g', checks: {} }, { commit: 'c', previousVersion: 'v', frontendHash: 'f', backendHash: 'b', gatewayHash: 'g' }), /oldFrontendNewBackend/));
+
+
+test('Yandex get-spec YAML is parsed as the live Gateway specification', () => {
+  const spec = gatewaySpec('openapi: \"3.0.0\"\nservers:\n  - url: https://example.apigw.yandexcloud.net\npaths:\n  /api/health:\n    get:\n      x-yc-apigateway-integration:\n        type: cloud_functions\n        function_id: fn\n        service_account_id: sa\n        tag: $latest\n');
+  assert.equal(spec.paths['/api/health'].get['x-yc-apigateway-integration'].function_id, 'fn');
+});
+
+test('generated Gateway server URLs do not cause false drift and are not sent back on update', () => {
+  const authored = { openapi: '3.0.0', paths: { '/': { get: { 'x-yc-apigateway-integration': { type: 'object_storage', bucket: 'bucket' } } } } };
+  const live = { ...structuredClone(authored), servers: [{ url: 'https://generated.apigw.yandexcloud.net' }] };
+  assert.deepEqual(comparableGateway(live), comparableGateway(authored));
+  const d = mkdtempSync(tmpdir() + '/gateway-spec-');
+  try {
+    const file = d + '/gateway.yaml'; writeGateway(file, live);
+    assert.equal(parse(readFileSync(file, 'utf8')).servers, undefined);
+  } finally { rmSync(d, { recursive: true }); }
+});
+
+
+test('Gateway invocation identity is distinct from Function runtime identity', () => {
+  const spec = { paths: { '/api/health': { get: { 'x-yc-apigateway-integration': { type: 'cloud_functions', function_id: 'fn', service_account_id: 'gateway-sa', tag: '$latest' } } } } };
+  assertGateway(spec, env);
+  assert.throws(() => assertGateway({ paths: { '/api/health': { get: { 'x-yc-apigateway-integration': { type: 'cloud_functions', function_id: 'fn', service_account_id: 'runtime-sa', tag: '$latest' } } } } }, env), /Gateway Function\/SA\/tag mismatch/);
+});

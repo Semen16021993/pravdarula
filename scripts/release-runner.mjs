@@ -16,10 +16,16 @@ const git = args => execFileSync('git', args, { encoding: 'utf8' }).trim();
 export function makeAdapter(env, directory) {
   const command = (tool, args, options = {}) => execFileSync(tool, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 180000, ...options });
   const cloud = args => JSON.parse(command('yc', [...args, '--retry', '0', '--no-cli-auto-prompt']));
+  const gateway = id => {
+    const resource = cloud(['serverless', 'api-gateway', 'get', id, '--format', 'json']);
+    const openapi_spec = command('yc', ['serverless', 'api-gateway', 'get-spec', '--id', id]);
+    return { ...resource, openapi_spec };
+  };
   const url = key => `${env.APP_BASE_URL.replace(/\/$/, '')}/${key.split('/').map(encodeURIComponent).join('/')}`;
   const readPublic = (key, file) => command('curl', ['--fail', '--silent', '--show-error', '--location', '--max-redirs', '0', '--output', file, url(key)]);
   return {
     cloud,
+    gateway,
     backup: dest => command('yc', ['storage', 's3', 'cp', '--recursive', `s3://${env.YC_BUCKET}/`, dest]),
     metadata: key => {
       const head = cloud(['storage', 's3api', 'head-object', '--bucket', env.YC_BUCKET, '--key', key, '--format', 'json']);
@@ -65,7 +71,7 @@ export async function runRelease(env = process.env, testing = {}) {
   const checkpoint = commit => {
     if (readGit(['rev-parse', 'HEAD']) !== commit || readGit(['status', '--porcelain'])) throw Error('Source tree/commit changed during preflight; release blocked');
   };
-  for (const key of ['YC_BUCKET', 'YC_FUNCTION_ID', 'YC_GATEWAY_ID', 'YC_RUNTIME_SA_ID', 'YC_AUTH_SECRET_ID', 'YC_PAY_SECRET_ID', 'YDB_CONNECTION_STRING', 'APP_BASE_URL']) if (!env[key]) throw Error(`Missing ${key}`);
+  for (const key of ['YC_BUCKET', 'YC_FUNCTION_ID', 'YC_GATEWAY_ID', 'YC_RUNTIME_SA_ID', 'YC_GATEWAY_SA_ID', 'YC_AUTH_SECRET_ID', 'YC_PAY_SECRET_ID', 'YDB_CONNECTION_STRING', 'APP_BASE_URL']) if (!env[key]) throw Error(`Missing ${key}`);
   if (env.APP_BASE_URL !== 'https://pravdarula.ru') throw Error('Unexpected production target; review before release');
   const target = hash(`${env.APP_BASE_URL}/${env.YC_BUCKET}`).slice(0, 16);
   const state = join(env.XDG_CACHE_HOME || join(env.HOME, '.cache'), 'pravdarula-releases', target);
@@ -105,7 +111,7 @@ export async function runRelease(env = process.env, testing = {}) {
     const functionResource = adapter.cloud(['serverless', 'function', 'get', env.YC_FUNCTION_ID, '--format', 'json']);
     if (functionResource.id !== env.YC_FUNCTION_ID) throw Error('Function resource identity mismatch');
     save('function-before.json', functionResource);
-    const gatewayRaw = adapter.cloud(['serverless', 'api-gateway', 'get', env.YC_GATEWAY_ID, '--format', 'json']);
+    const gatewayRaw = adapter.gateway ? adapter.gateway(env.YC_GATEWAY_ID) : adapter.cloud(['serverless', 'api-gateway', 'get', env.YC_GATEWAY_ID, '--format', 'json']);
     if (gatewayRaw.id !== env.YC_GATEWAY_ID || normalize(gatewayRaw).folder_id !== normalize(functionResource).folder_id) throw Error('Gateway identity/folder mismatch');
     save('gateway-before.json', gatewayRaw);
     save('current-before.json', previous);
@@ -156,7 +162,7 @@ export async function runRelease(env = process.env, testing = {}) {
     await ask(`Publish exact commit ${commit}? Configuration, payments and secret versions remain unchanged.`, 'DEPLOY');
     checkpoint(commit);
     const archiveHash = plan.backend ? hash(readFileSync('yandex-api/pravdarula-api.zip')) : null;
-    const latestGateway = gatewaySpec(adapter.cloud(['serverless', 'api-gateway', 'get', env.YC_GATEWAY_ID, '--format', 'json']));
+    const latestGateway = gatewaySpec(adapter.gateway ? adapter.gateway(env.YC_GATEWAY_ID) : adapter.cloud(['serverless', 'api-gateway', 'get', env.YC_GATEWAY_ID, '--format', 'json']));
     if (!equal(latestGateway, oldGateway)) throw Error('Gateway changed during approval');
     assertSameFunction(before, adapter.cloud(['serverless', 'function', 'version', 'get', before.id, '--format', 'json']));
     const activeBefore = adapter.cloud(['serverless', 'function', 'version', 'get-by-tag', '--function-id', env.YC_FUNCTION_ID, '--tag', tags[0], '--format', 'json']);
@@ -167,7 +173,7 @@ export async function runRelease(env = process.env, testing = {}) {
     const staticMetadata = Object.fromEntries(Object.keys(backupHashes).map(key => [key, adapter.metadata(key)]));
     await adapter.verifyStatic(backupHashes);
     const previousTag = `release-${before.id}`;
-    const pending = { directory, commit, previousVersion: before.id, previousTag, functionId: env.YC_FUNCTION_ID, gatewayId: env.YC_GATEWAY_ID, env: { YC_BUCKET: env.YC_BUCKET, YC_FUNCTION_ID: env.YC_FUNCTION_ID, YC_GATEWAY_ID: env.YC_GATEWAY_ID, YC_RUNTIME_SA_ID: env.YC_RUNTIME_SA_ID, APP_BASE_URL: env.APP_BASE_URL }, phase: 'prepared', migrationStarted: false, backupHashes, staticMetadata, snapshotHashes: Object.fromEntries(['function-before.json', 'version-before.json', 'gateway-before.json', 'gateway-desired.json', 'current-before.json'].map(name => [join(directory, name), hash(readFileSync(join(directory, name)))])) };
+    const pending = { directory, commit, previousVersion: before.id, previousTag, functionId: env.YC_FUNCTION_ID, gatewayId: env.YC_GATEWAY_ID, env: { YC_BUCKET: env.YC_BUCKET, YC_FUNCTION_ID: env.YC_FUNCTION_ID, YC_GATEWAY_ID: env.YC_GATEWAY_ID, YC_RUNTIME_SA_ID: env.YC_RUNTIME_SA_ID, YC_GATEWAY_SA_ID: env.YC_GATEWAY_SA_ID, APP_BASE_URL: env.APP_BASE_URL }, phase: 'prepared', migrationStarted: false, backupHashes, staticMetadata, snapshotHashes: Object.fromEntries(['function-before.json', 'version-before.json', 'gateway-before.json', 'gateway-desired.json', 'current-before.json'].map(name => [join(directory, name), hash(readFileSync(join(directory, name)))])) };
     const phase = name => { pending.phase = name; savePending(state, pending); };
     const mustPin = plan.backend || (plan.gateway && tags[0] === '$latest');
     if (mustPin) {
@@ -179,7 +185,7 @@ export async function runRelease(env = process.env, testing = {}) {
     const pinnedFile = join(directory, 'gateway-pinned-old.yaml'); writeGateway(pinnedFile, pinnedOld);
     phase('pin-gateway-before-candidate');
     adapter.cloud(['serverless', 'api-gateway', 'update', env.YC_GATEWAY_ID, '--spec', pinnedFile, '--format', 'json']);
-    if (!equal(gatewaySpec(adapter.cloud(['serverless', 'api-gateway', 'get', env.YC_GATEWAY_ID, '--format', 'json'])), pinnedOld)) throw Error('Gateway pin read-back failed');
+    if (!equal(gatewaySpec(adapter.gateway ? adapter.gateway(env.YC_GATEWAY_ID) : adapter.cloud(['serverless', 'api-gateway', 'get', env.YC_GATEWAY_ID, '--format', 'json'])), pinnedOld)) throw Error('Gateway pin read-back failed');
     await adapter.verifyPublic();
     }
     let active = before;
@@ -212,7 +218,7 @@ export async function runRelease(env = process.env, testing = {}) {
       phase('gateway-activation');
       adapter.cloud(['serverless', 'api-gateway', 'update', env.YC_GATEWAY_ID, '--spec', activationFile, '--format', 'json']);
     }
-    if (!equal(gatewaySpec(adapter.cloud(['serverless', 'api-gateway', 'get', env.YC_GATEWAY_ID, '--format', 'json'])), activated)) throw Error('Activated Gateway mismatch');
+    if (!equal(gatewaySpec(adapter.gateway ? adapter.gateway(env.YC_GATEWAY_ID) : adapter.cloud(['serverless', 'api-gateway', 'get', env.YC_GATEWAY_ID, '--format', 'json'])), activated)) throw Error('Activated Gateway mismatch');
     if (adapter.cloud(['serverless', 'function', 'version', 'get-by-tag', '--function-id', env.YC_FUNCTION_ID, '--tag', newTag, '--format', 'json']).id !== active.id) throw Error('Active version mismatch');
     await adapter.verifyStatic(assets); await adapter.verifyPublic();
     phase('verified');

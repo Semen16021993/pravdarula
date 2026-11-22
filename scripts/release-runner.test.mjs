@@ -11,9 +11,9 @@ function setup({ fail, baseline = false, noEvidence = false } = {}) {
   const cwd = process.cwd(), root = mkdtempSync(tmpdir() + '/release-e2e-'); process.chdir(root);
   for (const dir of ['yandex-api', '.output/public/assets', 'reports']) mkdirSync(dir, { recursive: true });
   const commit = 'a'.repeat(40);
-  const env = { HOME: root, APP_BASE_URL: 'https://pravdarula.ru', YC_BUCKET: 'bucket', YC_FUNCTION_ID: 'fn', YC_GATEWAY_ID: 'gw', YC_RUNTIME_SA_ID: 'sa', YC_AUTH_SECRET_ID: 'auth', YC_PAY_SECRET_ID: 'pay', YDB_CONNECTION_STRING: 'test-db', RELEASE_COMPATIBILITY_FILE: root + '/compatibility.json' };
+  const env = { HOME: root, APP_BASE_URL: 'https://pravdarula.ru', YC_BUCKET: 'bucket', YC_FUNCTION_ID: 'fn', YC_GATEWAY_ID: 'gw', YC_RUNTIME_SA_ID: 'sa', YC_GATEWAY_SA_ID: 'gateway-sa', YC_AUTH_SECRET_ID: 'auth', YC_PAY_SECRET_ID: 'pay', YDB_CONNECTION_STRING: 'test-db', RELEASE_COMPATIBILITY_FILE: root + '/compatibility.json' };
   const version = { id: 'v1', function_id: 'fn', runtime: 'nodejs22', entrypoint: 'index.handler', resources: { memory: '268435456' }, execution_timeout: '30s', service_account_id: 'sa', environment: { APP_BASE_URL: env.APP_BASE_URL, YDB_CONNECTION_STRING: 'test-db', YANDEX_PAY_ENV: 'sandbox' }, secrets: [{ id: 'auth', version_id: 'auth-v1', key: 'AUTH_SECRET', environment_variable: 'AUTH_SECRET' }, { id: 'pay', version_id: 'pay-v1', key: 'YANDEX_PAY_SANDBOX_API_KEY', environment_variable: 'YANDEX_PAY_SANDBOX_API_KEY' }] };
-  const spec = { paths: { '/': { get: { 'x-yc-apigateway-integration': { type: 'object_storage', bucket: 'bucket' } } }, '/api/health': { get: { 'x-yc-apigateway-integration': { type: 'cloud_functions', function_id: 'fn', service_account_id: 'sa', tag: baseline ? 'release-v1' : '$latest' } } } } };
+  const spec = { paths: { '/': { get: { 'x-yc-apigateway-integration': { type: 'object_storage', bucket: 'bucket' } } }, '/api/health': { get: { 'x-yc-apigateway-integration': { type: 'cloud_functions', function_id: 'fn', service_account_id: 'gateway-sa', tag: baseline ? 'release-v1' : '$latest' } } } } };
   writeFileSync('yandex-api/api-gateway.yaml', JSON.stringify(spec));
   writeFileSync('yandex-api/index.ts', 'if (method === "GET" && path === "/api/health") {}');
   const state = root + '/.cache/pravdarula-releases/' + hash(env.APP_BASE_URL + '/' + env.YC_BUCKET).slice(0, 16);
