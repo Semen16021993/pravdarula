@@ -10,6 +10,20 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
+  // In Lovable Preview, keep API requests same-origin so the HttpOnly session cookie
+  // belongs to the preview host. Vite forwards them to the live Yandex Cloud API.
+  // This proxy is dev-server-only and is not included in the Yandex production build.
+  vite: {
+    server: {
+      proxy: {
+        "/api": {
+          target: "https://pravdarula.ru",
+          changeOrigin: true,
+          secure: true,
+        },
+      },
+    },
+  },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
