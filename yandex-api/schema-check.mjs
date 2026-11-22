@@ -42,11 +42,11 @@ export function readLiveSchema(connection, tables) {
   const result = {};
   for (const table of tables) {
     if (!/^[a-z_][a-z0-9_]*$/.test(table)) throw Error('Unsafe schema identifier');
-    const args = ['--endpoint', `${url.protocol}//${url.host}`, '--database', database, '--token-file', process.env.YDB_TOKEN_FILE, 'scheme', 'describe', table, '--format', 'proto-json'];
+    const args = ['--endpoint', `${url.protocol}//${url.host}`, '--database', database, '--token-file', process.env.YDB_TOKEN_FILE, 'scheme', 'describe', table, '--format', 'proto-json-base64'];
     // Token in a restricted local FILE, never a CLI argument or log.
     if (!process.env.YDB_TOKEN_FILE) throw Error('YDB_TOKEN_FILE required (0600 IAM token file); inspect local ydb CLI auth support');
     if ((statSync(process.env.YDB_TOKEN_FILE).mode & 0o077) !== 0) throw Error('IAM token file permissions must exclude group/other access');
-    result[table] = canonicalSchema(JSON.parse(execFileSync('ydb', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 120000 })));
+    result[table] = canonicalSchema(JSON.parse(execFileSync('ydb', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 120000, env: { ...process.env, GRPC_DNS_RESOLVER: process.env.GRPC_DNS_RESOLVER || 'native' } })));
   }
   return stable(result);
 }

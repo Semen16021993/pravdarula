@@ -20,3 +20,8 @@ test('nullable type drift is not silently accepted', () => {
   assert.throws(() => assertBaselineContract({ users: changed }, baseline), /type mismatch/);
 });
 test('unexpected table settings remain part of drift comparison', () => assert.throws(() => assertAcceptedSchema({ users: { ...schema, ttl_settings: { column_name: 'created_at' } } }, { users: schema }), /drift/));
+
+test('YDB proto-json-base64 type_id fields are accepted directly', () => {
+  const described = canonicalSchema({ columns: [{ name: 'email', type: { type_id: 'UTF8' } }], primary_key: ['email'] });
+  assert.equal(described.columns[0].type, 'Utf8');
+});
