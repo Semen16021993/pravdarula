@@ -5,6 +5,8 @@ import { buildSync } from '../yandex-api/node_modules/esbuild/lib/main.js';
 import ts from 'typescript';
 
 export const hash = (value) => createHash('sha256').update(value).digest('hex');
+// Git -z emits literal UTF-8 paths, including spaces/newlines, without core.quotePath escaping.
+export const parseGitPaths = output => output.split('\0').filter(Boolean);
 export function assertSourceBoundary(paths, read = path => existsSync(path) ? readFileSync(path, 'utf8') : '') {
   for (const path of paths.filter(p => /^src\/.*\.[cm]?[jt]sx?$/.test(p))) {
     const tree = ts.createSourceFile(path, read(path), ts.ScriptTarget.Latest, true);

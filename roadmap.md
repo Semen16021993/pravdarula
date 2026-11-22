@@ -1,3 +1,6 @@
+# Release path blocker
+- [x] Reproduced the 38553f5 log: 7 quoted Cyrillic documentation paths plus 16 individually inspected files. Fixed only NUL-delimited Git path reading, retained fail-closed classification and exact review checks; prepared external commit/hash-bound review delivery after the fix commit. No deployment or cloud changes.
+
 # Responsive screens
 - [x] Correct mobile density and header legal reference; all three introduction screens fit simulated iPhone 13 content heights 664/680/724px without scrolling, with 16px body text and immediately visible actions. Repeated 378 workflow checks and DOCX/PDF/ZIP downloads passed; real-device Safari remains unverified, production unchanged.
 - [x] Adapt login, introduction, constructor, cart, payment result and cabinet for phones, tablets and desktop widths.

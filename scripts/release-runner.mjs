@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { createInterface } from 'node:readline/promises';
 import { pathToFileURL } from 'node:url';
-import { planChanges, backendDependencies, backendEndpoints, assertSourceBoundary, hash, assertProductionAssets, fileManifest } from './release-plan.mjs';
+import { planChanges, parseGitPaths, backendDependencies, backendEndpoints, assertSourceBoundary, hash, assertProductionAssets, fileManifest } from './release-plan.mjs';
 import { normalize, verifyFunction, assertSameFunction, candidateArgs, gatewaySpec, assertGateway, gatewayTags, pinGateway, writeGateway, equal, comparableGateway, assertEndpoints, assertCompatibility, assertReadOnlyProbe } from './release-safety.mjs';
 import { contentType, savePending, recoverRelease } from './release-recovery.mjs';
 
@@ -89,7 +89,7 @@ export async function runRelease(env = process.env, testing = {}) {
     checkpoint(commit);
     const previous = existsSync(join(state, 'current.json')) ? JSON.parse(readFileSync(join(state, 'current.json'), 'utf8')) : null;
     if (previous && (previous.origin !== env.APP_BASE_URL || previous.bucket !== env.YC_BUCKET || !/^[a-f0-9]{40}$/.test(previous.commit))) throw Error('Invalid or foreign release baseline');
-    const paths = readGit(previous ? ['diff', '--name-only', previous.commit, commit] : ['ls-files']).split('\n').filter(Boolean);
+    const paths = parseGitPaths(readGit(previous ? ['diff', '--name-only', '-z', previous.commit, commit] : ['ls-files', '-z']));
     assertSourceBoundary(paths);
     const dependencies = testing.dependencies ? testing.dependencies() : backendDependencies();
     const plan = planChanges(paths, Boolean(previous), [...dependencies, ...(previous?.backendSources || [])]);

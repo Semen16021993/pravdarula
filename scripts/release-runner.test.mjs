@@ -57,7 +57,7 @@ function setup({ fail, baseline = false, noEvidence = false } = {}) {
     probe: (tag, path) => { assert.equal(tags[tag].id, 'v2'); event('probe:' + path); },
   };
   const options = {
-    git: args => args[0] === 'status' ? '' : args[0] === 'rev-parse' ? commit : 'src/styles.css',
+    git: args => args[0] === 'status' ? '' : args[0] === 'rev-parse' ? commit : 'src/styles.css\0',
     dependencies: () => ['yandex-api/index.ts'],
     makeAdapter: () => adapter,
     approval: async (_, word) => { approvals.push(word); if (fail === 'approval' && word === 'DEPLOY') throw Error('Approval declined'); },
@@ -79,6 +79,29 @@ function setup({ fail, baseline = false, noEvidence = false } = {}) {
     },
   };
   return { env, options, state, commands, approvals, storage, cleanup: () => { process.chdir(cwd); rmSync(root, { recursive: true }); } };
+}
+
+for (const kind of ['missing', 'wrong-commit', 'wrong-hash', 'unreviewed-extra', 'correct']) {
+  test(`exact path review ${kind}: only exact commit and every file hash reach PATHS approval`, async () => {
+    const f = setup();
+    try {
+      writeFileSync('.env.example', 'reviewed example');
+      writeFileSync('unknown.conf', 'unknown');
+      const commit = 'a'.repeat(40);
+      f.options.git = args => args[0] === 'status' ? '' : args[0] === 'rev-parse' ? commit : '.env.example\0' + (kind === 'unreviewed-extra' ? 'unknown.conf\0' : '');
+      if (kind !== 'missing') {
+        const file = process.cwd() + '/review.json';
+        writeFileSync(file, JSON.stringify({ commit: kind === 'wrong-commit' ? 'b'.repeat(40) : commit, paths: { '.env.example': hash(kind === 'wrong-hash' ? 'different' : 'reviewed example') } }));
+        f.env.RELEASE_PATH_REVIEW_FILE = file;
+      }
+      let reached = false;
+      f.options.makeAdapter = () => { reached = true; throw Error('LOCAL_VERIFIED_STOP'); };
+      await assert.rejects(runRelease(f.env, f.options), kind === 'correct' ? /LOCAL_VERIFIED_STOP/ : /Unreviewed changed paths/);
+      assert.equal(reached, kind === 'correct');
+      assert.deepEqual(f.approvals, kind === 'correct' ? ['PATHS'] : []);
+      assert.deepEqual(f.commands, []);
+    } finally { f.cleanup(); }
+  });
 }
 
 test('full release: baseline pin precedes new latest; manifest follows actual static/API verification', async () => {

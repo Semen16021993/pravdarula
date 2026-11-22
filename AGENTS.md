@@ -37,5 +37,6 @@ use the editor.
 - Frontend demo requires both the Preview build flag and this project's verified hostname after hydration; lazy demo imports are eliminated by the Yandex build's false flag so production cannot load mock users or purchases.
 - Production form defaults are empty and must never import Preview fixtures; user/server values alone populate real forms to prevent synthetic data being saved to YDB.
 - Universal Yandex releases use bundler dependency metadata, literal API/Gateway inventory, full Function config read-back, pinned version tags and exact-artifact compatibility evidence before activation; this prevents silent omissions or immediate $latest activation.
+- Read release file lists with Git -z and NUL delimiters; literal UTF-8 paths must reach classification and exact-hash review without quotePath escaping.
 - Persist pending releases and checksummed recovery snapshots before cloud writes; locally rehearsed recovery restores static files, the pinned Function/Gateway and the previous manifest, while uncertain YDB changes stop automated code rollback.
 - Apply only separately approved, preflighted single-statement idempotent additive YDB migrations with complete schema postconditions; destructive DDL stays blocked until an external recovery workflow is implemented and rehearsed.

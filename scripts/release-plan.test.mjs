@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { planChanges, backendDependencies, backendEndpoints, assertSourceBoundary } from './release-plan.mjs';
+import { planChanges, parseGitPaths, backendDependencies, backendEndpoints, assertSourceBoundary } from './release-plan.mjs';
 import { parse } from 'yaml';
 import { readFileSync } from 'node:fs';
 import { assertEndpoints } from './release-safety.mjs';
@@ -23,6 +23,14 @@ test('first release never silently assumes a baseline', () => {
 });
 test('unknown files fail into an explicit review instead of silently skipping', () => {
   assert.deepEqual(planChanges(['new-infrastructure.conf'], true).unknown, ['new-infrastructure.conf']);
+});
+test('literal Git paths classify Cyrillic plans without approving unknown infrastructure', () => {
+  const paths = parseGitPaths('.lovable/plan/единый-деплой-на-yandex.md\0new-infrastructure.conf\0');
+  assert.deepEqual(paths, ['.lovable/plan/единый-деплой-на-yandex.md', 'new-infrastructure.conf']);
+  assert.deepEqual(planChanges(paths, true).unknown, ['new-infrastructure.conf']);
+});
+test('NUL path parsing preserves spaces, newlines and quotes in actual filenames', () => {
+  assert.deepEqual(parseGitPaths('some file\nwith "quotes".conf\0'), ['some file\nwith "quotes".conf']);
 });
 test('migration-only change does not rebuild unrelated parts', () => {
   const p = planChanges(['yandex-api/migrations/001.json'], true);
